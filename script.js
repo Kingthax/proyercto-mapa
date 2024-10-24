@@ -111,7 +111,7 @@ function generateRandomPhoneNumber() {
 function generateGasfiterMarkers(center) {
   // Generar 5 marcadores aleatorios dentro de un radio de 500 metros
   for (let i = 0; i < 5; i++) {
-    const randomLocation = getRandomLocation(center, 500);  // Generar una ubicación aleatoria a 500 metros
+    const randomLocation = getRandomLocation(center, 5000);  // Generar una ubicación aleatoria a 500 metros
     const name = generateRandomName();
     const address = generateRandomAddress();
     const email = generateRandomEmail(name);
