@@ -1,0 +1,38 @@
+#map {
+  height: 50vh;  /* Altura del mapa será el 50% de la ventana */
+  width: 100vw;  /* Ancho completo de la pantalla */
+}
+
+@media (max-width: 600px) {
+  #map {
+    height: 70vh; /* Altura del mapa será mayor en pantallas móviles */
+  }
+}
+
+#panel {
+  padding: 10px;
+  background: #f4f4f4;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+/* 
+ * Always set the map height explicitly to define the size of the div element
+ * that contains the map. 
+ */
+ #map {
+  height: 100%;
+}
+
+/* 
+ * Optional: Makes the sample page fill the window. 
+ */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+gmp-map {
+  height: 400px;
+}

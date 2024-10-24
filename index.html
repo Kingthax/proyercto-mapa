@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seguimiento Real a Gasfíteres con Google Maps API</title>
+
+  <!-- Incluir archivo CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Cargar la API de Google Maps con tu clave API -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDNQPPM-69ZdtUwUKpUzoUTnS9u-5EGI-g&callback=initMap"></script>
+</head>
+<body>
+  <!-- Contenedor donde se mostrará el mapa -->
+  <div id="map"></div>
+
+  <!-- Panel para seleccionar la ubicación del gasfíter -->
+  <div id="panel">
+    <h3>Seleccione un gasfíter:</h3>
+    <select id="gasfiterSelect"></select>
+    <!-- Botón para calcular la ruta caminando -->
+    <button id="walkingRouteBtn" onclick="calculateRoute('WALKING')">Ruta Caminando</button>
+  </div>
+
+  <!-- Incluir archivo JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>
