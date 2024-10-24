@@ -60,20 +60,20 @@ function getUserLocation() {
       });
 
       // Generar los gasfíteres alrededor de la ubicación real
-      //generateGasfiterMarkers(userLocation);
+      generateGasfiterMarkers(userLocation);
     }, function() {
       console.warn('No se pudo obtener la ubicación del usuario, usando la ubicación de respaldo.');
       userLocation = fallbackLocation;  // Usar la ubicación de respaldo si falla la geolocalización
 
       // Generar los gasfíteres alrededor de la ubicación de respaldo
-      //generateGasfiterMarkers(userLocation);
+      generateGasfiterMarkers(userLocation);
     });
   } else {
     console.warn('Geolocalización no es compatible con este navegador, usando la ubicación de respaldo.');
     userLocation = fallbackLocation;  // Usar la ubicación de respaldo si la geolocalización no es compatible
 
     // Generar los gasfíteres alrededor de la ubicación de respaldo
-    //generateGasfiterMarkers(userLocation);
+    generateGasfiterMarkers(userLocation);
   }
 }
 
