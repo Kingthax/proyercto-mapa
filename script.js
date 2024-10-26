@@ -117,6 +117,7 @@ function generateGasfiterMarkers(center) {
     const email = generateRandomEmail(name);
     const phoneNumber = generateRandomPhoneNumber();
 
+    
     // Crear marcador para cada gasfíter con una ventana de información
     const marker = new google.maps.Marker({
       position: randomLocation,
@@ -131,9 +132,11 @@ function generateGasfiterMarkers(center) {
           <p><strong>Dirección:</strong> ${address}</p>
           <p><strong>Correo:</strong> ${email}</p>
           <p><strong>Teléfono:</strong> ${phoneNumber}</p>
+          <a href="#" onclick="openScheduleModal('${name}')">Ver horarios</a>
         </div>
       `
     });
+    
 
     // Mostrar la ventana de información al hacer clic en el marcador
     marker.addListener('click', function() {
@@ -194,4 +197,80 @@ function calculateRoute(travelMode = 'DRIVING') {
       alert('No se pudo calcular la ruta: ' + status);
     }
   });
+}
+
+// Función para abrir el modal de horarios
+function openScheduleModal(name) {
+  const modal = document.getElementById('scheduleModal');
+  document.getElementById('scheduleTitle').innerText = `Horarios de ${name}`;
+  generateScheduleTable();
+  modal.style.display = 'block';
+}
+
+// Función para generar la tabla de horarios
+function generateScheduleTable() {
+  const container = document.getElementById('scheduleContainer');
+  container.innerHTML = '';
+
+  const table = document.createElement('table');
+  table.className = 'schedule-table';
+
+  const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const hours = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+
+  // Crear encabezado de la tabla
+  const headerRow = document.createElement('tr');
+  const emptyCell = document.createElement('th');
+  headerRow.appendChild(emptyCell);
+
+  days.forEach(day => {
+    const th = document.createElement('th');
+    th.innerText = day;
+    headerRow.appendChild(th);
+  });
+  table.appendChild(headerRow);
+
+  // Crear filas de horas
+  hours.forEach(hour => {
+    const row = document.createElement('tr');
+    const hourCell = document.createElement('td');
+    hourCell.innerText = hour;
+    row.appendChild(hourCell);
+
+    days.forEach((day, index) => {
+      const cell = document.createElement('td');
+
+      // Horarios disponibles para lunes a viernes
+      if (index < 5 || (index === 5 && ['09:00', '10:00', '11:00', '12:00'].includes(hour))) {
+        cell.className = 'available';
+        cell.innerText = 'Disponible';
+        cell.onclick = () => toggleCell(cell);
+      } else {
+        cell.className = 'unavailable';
+        cell.innerText = 'No Disponible';
+      }
+      row.appendChild(cell);
+    });
+    table.appendChild(row);
+  });
+
+  container.appendChild(table);
+}
+
+// Función para alternar la selección de celdas de la tabla
+function toggleCell(cell) {
+  if (cell.classList.contains('available')) {
+    cell.classList.remove('available');
+    cell.classList.add('confirmed');
+    cell.innerText = 'Confirmado';
+  } else if (cell.classList.contains('confirmed')) {
+    cell.classList.remove('confirmed');
+    cell.classList.add('available');
+    cell.innerText = 'Disponible';
+  }
+}
+
+// Función para cerrar el modal de horarios
+function closeScheduleModal() {
+  document.getElementById('scheduleModal').style.display = 'none';
 }
