@@ -31,7 +31,10 @@
 <div id="scheduleModal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeScheduleModal()">&times;</span>
-    <h2 id="scheduleTitle">Horarios</h2>
+    <h2 id="scheduleTitle">Horarios de {{nombre del gasfíter}}</h2>
     <div id="scheduleContainer" class="table-container"></div>
+    <!-- Cambia el texto del botón a "Agendar Horario" -->
+    <button id="confirmScheduleBtn" onclick="scheduleAppointment()">Agendar Horario</button>
   </div>
 </div>
+

@@ -274,3 +274,108 @@ function toggleCell(cell) {
 function closeScheduleModal() {
   document.getElementById('scheduleModal').style.display = 'none';
 }
+let selectedCell = null;  // Almacenar la celda seleccionada
+
+// Función para alternar la selección de celdas de la tabla
+function toggleCell(cell) {
+  if (cell.classList.contains('available')) {
+    // Deseleccionar cualquier celda previamente seleccionada
+    if (selectedCell) {
+      selectedCell.classList.remove('selected');
+      selectedCell.classList.add('available');
+      selectedCell.innerText = 'Disponible';
+    }
+
+    // Seleccionar la nueva celda
+    cell.classList.remove('available');
+    cell.classList.add('selected');
+    cell.innerText = 'Seleccionado';
+    selectedCell = cell;  // Guardar la celda seleccionada
+  }
+}
+
+// Función para confirmar y guardar el horario seleccionado
+function confirmSchedule() {
+  if (selectedCell) {
+    // Cambiar la clase a 'confirmed' para indicar que el horario está reservado
+    selectedCell.classList.remove('selected');
+    selectedCell.classList.add('confirmed');
+    selectedCell.innerText = 'Confirmado';
+    
+    // Guardar la información del horario en el backend o localmente
+    saveSchedule(selectedCell);  // Llama a una función para guardar el horario
+
+    // Resetear la selección
+    selectedCell = null;
+    alert('Horario confirmado exitosamente.');
+  } else {
+    alert('Por favor, selecciona un horario antes de confirmar.');
+  }
+}
+
+// Función para cerrar el modal de horarios
+function closeScheduleModal() {
+  document.getElementById('scheduleModal').style.display = 'none';
+}
+
+// Simulación de guardado en backend/localmente
+function saveSchedule(cell) {
+  // Aquí podrías agregar una llamada a tu backend para guardar el horario seleccionado
+  // Ejemplo: enviar el día y hora seleccionados
+  const day = cell.parentElement.firstChild.innerText;  // Obtener el día
+  const time = cell.innerText;  // Obtener la hora
+  console.log(`Horario guardado: Día - ${day}, Hora - ${time}`);
+
+  // En un entorno real, puedes hacer un fetch POST para guardar estos datos en el backend.
+}
+app.post('/api/save-schedule', (req, res) => {
+  const { day, time, gasfiterId, userId } = req.body;
+  
+  // Aquí, guardarías estos datos en una base de datos
+  console.log(`Horario guardado para el día ${day} a las ${time}, gasfíter: ${gasfiterId}, usuario: ${userId}`);
+  
+  res.json({ message: 'Horario confirmado y guardado correctamente' });
+});
+async function saveSchedule(cell) {
+  const day = cell.parentElement.firstChild.innerText;  // Día de la semana
+  const time = cell.innerText;  // Hora seleccionada
+
+  // Enviar datos al backend
+  try {
+    const response = await fetch('http://localhost:5000/api/save-schedule', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        day: day,
+        time: time,
+        gasfiterId: selectedGasfiterId,  // Este valor lo defines según tu lógica
+        userId: currentUserId            // Este valor lo defines según tu lógica
+      })
+    });
+
+    const data = await response.json();
+    console.log(data.message);
+  } catch (error) {
+    console.error('Error al guardar el horario:', error);
+  }
+}
+// Función para agendar y guardar el horario seleccionado
+function scheduleAppointment() {
+  if (selectedCell) {
+    // Cambia la clase a 'confirmed' para indicar que el horario está reservado
+    selectedCell.classList.remove('selected');
+    selectedCell.classList.add('confirmed');
+    selectedCell.innerText = 'Agendado';  // Cambia el texto a "Agendado"
+
+    // Guardar la información del horario en el backend o localmente
+    saveSchedule(selectedCell);  // Llama a una función para guardar el horario
+
+    // Resetear la selección
+    selectedCell = null;
+    alert('Horario agendado exitosamente.');
+  } else {
+    alert('Por favor, selecciona un horario antes de agendar.');
+  }
+}
