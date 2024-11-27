@@ -38,3 +38,21 @@
   </div>
 </div>
 
+<a href="perfil-gasfiter.html?id=123">Ver Perfil del Gasfíter</a>
+
+<!-- Modal para Valoración -->
+<div id="ratingModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeRatingModal()">&times;</span>
+    <h2>Valorar el Servicio</h2>
+    <div id="stars" class="star-rating">
+      <!-- Estrellas para valoración -->
+      <span onclick="rate(1)">★</span>
+      <span onclick="rate(2)">★</span>
+      <span onclick="rate(3)">★</span>
+      <span onclick="rate(4)">★</span>
+      <span onclick="rate(5)">★</span>
+    </div>
+    <button onclick="submitRating()">Enviar Valoración</button>
+  </div>
+</div>
