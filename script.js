@@ -2,7 +2,7 @@ let map, directionsService, directionsRenderer;
 const gasfiterLocations = [];
 const fallbackLocation = { lat: -32.796517, lng: -71.208456 };  // Ubicación fija de respaldo (casa)
 let userLocation = null;  // Para almacenar la ubicación del usuario
-
+let reservasGen;
 function initMap() {
   // Usar la ubicación de respaldo inicialmente para centrar el mapa
   const centerLocation = fallbackLocation;
@@ -10,12 +10,12 @@ function initMap() {
   // Crear un nuevo mapa centrado en la ubicación de respaldo
   map = new google.maps.Map(document.getElementById('map'));
 
-navigator.geolocation.getCurrentPosition(function(position) {
+  navigator.geolocation.getCurrentPosition(function (position) {
     var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
     map.setCenter(initialLocation);
     map.setZoom(13);
-  }, function(positionError) {
-       map.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
+  }, function (positionError) {
+    map.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
     map.setZoom(5);
   });
   // map = new google.maps.Map(document.getElementById("map"), {
@@ -42,7 +42,7 @@ navigator.geolocation.getCurrentPosition(function(position) {
 // Función para obtener la ubicación del usuario
 function getUserLocation() {
   if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(position) {
+    navigator.geolocation.getCurrentPosition(function (position) {
       userLocation = {
         lat: position.coords.latitude,
         lng: position.coords.longitude
@@ -61,7 +61,7 @@ function getUserLocation() {
 
       // Generar los gasfíteres alrededor de la ubicación real
       generateGasfiterMarkers(userLocation);
-    }, function() {
+    }, function () {
       console.warn('No se pudo obtener la ubicación del usuario, usando la ubicación de respaldo.');
       userLocation = fallbackLocation;  // Usar la ubicación de respaldo si falla la geolocalización
 
@@ -117,7 +117,7 @@ function generateGasfiterMarkers(center) {
     const email = generateRandomEmail(name);
     const phoneNumber = generateRandomPhoneNumber();
 
-    
+
     // Crear marcador para cada gasfíter con una ventana de información
     const marker = new google.maps.Marker({
       position: randomLocation,
@@ -136,10 +136,10 @@ function generateGasfiterMarkers(center) {
         </div>
       `
     });
-    
+
 
     // Mostrar la ventana de información al hacer clic en el marcador
-    marker.addListener('click', function() {
+    marker.addListener('click', function () {
       infoWindow.open(map, marker);
     });
 
@@ -190,7 +190,7 @@ function calculateRoute(travelMode = 'DRIVING') {
   };
 
   // Hacer la solicitud de ruta
-  directionsService.route(request, function(result, status) {
+  directionsService.route(request, function (result, status) {
     if (status === 'OK') {
       directionsRenderer.setDirections(result);  // Mostrar la ruta en el mapa
     } else {
@@ -201,6 +201,8 @@ function calculateRoute(travelMode = 'DRIVING') {
 
 // Función para abrir el modal de horarios
 function openScheduleModal(name) {
+
+
   const modal = document.getElementById('scheduleModal');
   document.getElementById('scheduleTitle').innerText = `Horarios de ${name}`;
   generateScheduleTable();
@@ -231,7 +233,7 @@ function generateScheduleTable() {
   table.appendChild(headerRow);
 
   // Crear filas de horas
-  hours.forEach(hour => {
+  hours.forEach((hour) => {
     const row = document.createElement('tr');
     const hourCell = document.createElement('td');
     hourCell.innerText = hour;
@@ -239,23 +241,36 @@ function generateScheduleTable() {
 
     days.forEach((day, index) => {
       const cell = document.createElement('td');
+      // Verificar si la celda está reservada
+      const isReserved = reservasGen.some((reserva) => {
+        console.log("reserva", reserva);
+        console.log("reserva.dayIndex", reserva.dayIndex);
+        console.log("index", index);
+        console.log("reserva.hour", reserva.hour);
+        console.log("hour", hour);
+        // Verificar si coinciden el día de la semana (dayIndex) y la hora (hour)
+        return reserva.dayIndex == index + 1 && reserva.hour == hour;
+      });
 
-      // Horarios disponibles para lunes a viernes
-      if (index < 5 || (index === 5 && ['09:00', '10:00', '11:00', '12:00'].includes(hour))) {
+      if (isReserved) {
+        cell.className = 'unavailable';
+        cell.innerText = 'No Disponible';
+      } else {
         cell.className = 'available';
         cell.innerText = 'Disponible';
         cell.onclick = () => toggleCell(cell);
-      } else {
-        cell.className = 'unavailable';
-        cell.innerText = 'No Disponible';
       }
+
       row.appendChild(cell);
     });
+
     table.appendChild(row);
   });
 
   container.appendChild(table);
 }
+
+
 
 // Función para alternar la selección de celdas de la tabla
 function toggleCell(cell) {
@@ -301,7 +316,7 @@ function confirmSchedule() {
     selectedCell.classList.remove('selected');
     selectedCell.classList.add('confirmed');
     selectedCell.innerText = 'Confirmado';
-    
+
     // Guardar la información del horario en el backend o localmente
     saveSchedule(selectedCell);  // Llama a una función para guardar el horario
 
@@ -317,65 +332,89 @@ function confirmSchedule() {
 function closeScheduleModal() {
   document.getElementById('scheduleModal').style.display = 'none';
 }
+// Función para transformar citas en formato reservas
+const transformCitasToReservas = (citas) => {
+  return citas.map(cita => {
+    const fecha = new Date(cita.Fecha);
+    return {
+      dayIndex: fecha.getDay(), // Devuelve el índice del día (0 = Domingo, 6 = Sábado)
+      hour: cita.Fecha.split(' ')[1].slice(0, 5) // Extrae HH:mm de la fecha
+    };
+  });
+};
 
-// Simulación de guardado en backend/localmente
-function saveSchedule(cell) {
-  // Aquí podrías agregar una llamada a tu backend para guardar el horario seleccionado
-  // Ejemplo: enviar el día y hora seleccionados
-  const day = cell.parentElement.firstChild.innerText;  // Obtener el día
-  const time = cell.innerText;  // Obtener la hora
-  console.log(`Horario guardado: Día - ${day}, Hora - ${time}`);
-
-  // En un entorno real, puedes hacer un fetch POST para guardar estos datos en el backend.
-}
-app.post('/api/save-schedule', (req, res) => {
-  const { day, time, gasfiterId, userId } = req.body;
-  
-  // Aquí, guardarías estos datos en una base de datos
-  console.log(`Horario guardado para el día ${day} a las ${time}, gasfíter: ${gasfiterId}, usuario: ${userId}`);
-  
-  res.json({ message: 'Horario confirmado y guardado correctamente' });
-});
-async function saveSchedule(cell) {
-  const day = cell.parentElement.firstChild.innerText;  // Día de la semana
-  const time = cell.innerText;  // Hora seleccionada
-
-  // Enviar datos al backend
+async function fetchReservas() {
   try {
-    const response = await fetch('http://localhost:5000/api/save-schedule', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        day: day,
-        time: time,
-        gasfiterId: selectedGasfiterId,  // Este valor lo defines según tu lógica
-        userId: currentUserId            // Este valor lo defines según tu lógica
-      })
+    var settings = {
+      "url": "http://localhost:5000/api/citas",
+      "method": "GET",
+      "timeout": 0,
+    };
+
+    $.ajax(settings).done(function (response) {
+      console.log(response);
+
+      // Transformar citas
+      const reservas = transformCitasToReservas(response);
+      reservasGen = reservas;
+      console.log(reservas);
+
     });
-
-    const data = await response.json();
-    console.log(data.message);
   } catch (error) {
-    console.error('Error al guardar el horario:', error);
+    console.error('Error al obtener reservas:', error);
   }
 }
-// Función para agendar y guardar el horario seleccionado
+
+// Llamar a la función
+fetchReservas();
+
 function scheduleAppointment() {
-  if (selectedCell) {
-    // Cambia la clase a 'confirmed' para indicar que el horario está reservado
-    selectedCell.classList.remove('selected');
-    selectedCell.classList.add('confirmed');
-    selectedCell.innerText = 'Agendado';  // Cambia el texto a "Agendado"
+  console.log("entro")
+  var settings = {
+    "url": "http://localhost:5000/api/citas",
+    "method": "POST",
+    "timeout": 0,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "data": JSON.stringify({
+      "idUsuario": 2,
+      "idgasfiter": 3,
+      "Fecha": "2024/12/04 15:00:00",
+      "Estado": 5,
+      "calificacion": 8
+    }),
+  };
 
-    // Guardar la información del horario en el backend o localmente
-    saveSchedule(selectedCell);  // Llama a una función para guardar el horario
-
-    // Resetear la selección
-    selectedCell = null;
-    alert('Horario agendado exitosamente.');
-  } else {
-    alert('Por favor, selecciona un horario antes de agendar.');
-  }
+  $.ajax(settings).done(function (response) {
+    console.log(response);
+  });
 }
+
+$(document).ready(function () {
+  $(document).ready(function () {
+    $('#login-button').click(function () {
+      const username = $('#username').val();
+      const password = $('#password').val();
+      const userType = $('#user_type').val();
+
+      if (
+        (username === 'usuario_1' || username === 'usuario_2' || username === 'usuario_3') &&
+        userType === 'usuario_cliente' &&
+        password === '1234'
+      ) {
+        $('.login-container').css('display', 'none');
+        $('#map').css('display', 'block');
+      } 
+      else if((username === 'gasfiter_1' || username === 'gasfiter_2' || username === 'gasfiter_3') &&
+      userType === 'usuario_gasfiter' &&
+      password === 'qwer'){
+        $('.login-container').css('display', 'none');
+        $('#map').css('display', 'block');
+      }
+      else {
+        alert('Credenciales incorrectas o tipo de usuario no válido.');
+      }
+    });
+  });
+});

@@ -5,25 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Perfil del Gasfíter</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 </head>
 <body>
+  <h1>Perfil del Gasfíter</h1>
 
-  <script src="perfil-gasfiter.js"></script>
+  <!-- Panel para seleccionar un gasfíter -->
+  <div id="panel">
+    <h3>Seleccione un gasfíter:</h3>
+          <!-- Opciones serán añadidas dinámicamente -->
+      <select id="gasfiterSelect"> onchange="loadGasfiterInfo()">
+      <option value="1">Ana Pérez</option>
+      <option value="2">Luis Rodríguez</option>
+      <option value="3">Ana López</option>
+      <option value="4">Pedro González</option>
+      <option value="5">Pedro Pérez</option>
+    </select>
+    
+  </div>
+
+  <button onclick="openScheduleModal()">Ver Calendario</button>
+
+  <!-- Modal para la calendarización -->
+  <div id="scheduleModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeScheduleModal()">&times;</span>
+      <h2 id="scheduleTitle">Horarios del Gasfíter</h2>
+      <div id="scheduleContainer" class="table-container"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
-
-<div id="gasfiter-info">
-  <p><strong>Nombre:</strong> <span id="gasfiter-name"></span></p>
-  <p><strong>Servicio:</strong> <span id="gasfiter-service"></span></p>
-  <p><strong>Calificación promedio:</strong> <span id="gasfiter-rating"></span></p>
-</div>
-
-<h2>Citas Pendientes</h2>
-<div id="pending-appointments">
-  <p>Cargando citas pendientes...</p>
-</div>
-    <hr>
-    <h2>Reseñas de usuarios</h2>
-    <div id="user-reviews">
-      <p>Cargando reseñas...</p>
-    </div>

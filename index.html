@@ -1,58 +1,564 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seguimiento Real a Gasfíteres con Google Maps API</title>
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 
   <!-- Incluir archivo CSS -->
   <link rel="stylesheet" href="style.css">
 
   <!-- Cargar la API de Google Maps con tu clave API -->
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDNQPPM-69ZdtUwUKpUzoUTnS9u-5EGI-g&callback=initMap"></script>
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDNQPPM-69ZdtUwUKpUzoUTnS9u-5EGI-g&callback=initMap"></script>
 </head>
+
 <body>
   <!-- Contenedor donde se mostrará el mapa -->
-  <div id="map"></div>
+  <div id="map" style="display: none;"></div>
 
   <!-- Panel para seleccionar la ubicación del gasfíter -->
-  <div id="panel">
+  <div id="panelUbicación" style="display: none;">
     <h3>Seleccione un gasfíter:</h3>
     <select id="gasfiterSelect"></select>
     <!-- Botón para calcular la ruta caminando -->
     <button id="walkingRouteBtn" onclick="calculateRoute('WALKING')">Ruta Caminando</button>
   </div>
 
-  <!-- Incluir archivo JavaScript -->
-  <script src="script.js"></script>
-</body>
-</html>
-<!-- Modal para la calendarización -->
-<div id="scheduleModal" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="closeScheduleModal()">&times;</span>
-    <h2 id="scheduleTitle">Horarios de {{nombre del gasfíter}}</h2>
-    <div id="scheduleContainer" class="table-container"></div>
-    <!-- Cambia el texto del botón a "Agendar Horario" -->
-    <button id="confirmScheduleBtn" onclick="scheduleAppointment()">Agendar Horario</button>
-  </div>
-</div>
 
-<a href="perfil-gasfiter.html?id=123">Ver Perfil del Gasfíter</a>
-
-<!-- Modal para Valoración -->
-<div id="ratingModal" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="closeRatingModal()">&times;</span>
-    <h2>Valorar el Servicio</h2>
-    <div id="stars" class="star-rating">
-      <!-- Estrellas para valoración -->
-      <span onclick="rate(1)">★</span>
-      <span onclick="rate(2)">★</span>
-      <span onclick="rate(3)">★</span>
-      <span onclick="rate(4)">★</span>
-      <span onclick="rate(5)">★</span>
+  <!-- Login cliente gasfiteer -->
+  <div class="login-container">
+    <h2>Login</h2>
+    <div class="form-group">
+      <label for="username">Usuario:</label>
+      <input type="text" id="username" placeholder="Ingrese su usuario">
     </div>
-    <button onclick="submitRating()">Enviar Valoración</button>
+    <div class="form-group">
+      <label for="password">Contraseña:</label>
+      <input type="password" id="password" placeholder="Ingrese su contraseña">
+    </div>
+    <div class="form-group">
+      <label for="user_type">Tipo de usuario:</label>
+      <select id="user_type">
+        <option value="usuario_cliente">Cliente</option>
+        <option value="usuario_gasfiter">Gasfiter</option>
+      </select>
+    </div>
+    <button id="login-button">Ingresar</button>
   </div>
-</div>
+  <!-- Modal para la calendarización -->
+  <div id="scheduleModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeScheduleModal()">&times;</span>
+      <h2 id="scheduleTitle">Horarios de {{nombre del gasfíter}}</h2>
+      <div id="scheduleContainer" class="table-container"></div>
+      <!-- Cambia el texto del botón a "Agendar Horario" -->
+      <button id="confirmScheduleBtn" onclick="scheduleAppointment()">Agendar Horario</button>
+    </div>
+  </div>
+  <div id="panelGasfiter" style="display: none;">
+    <h3>Seleccione un gasfíter:</h3>
+    <!-- Opciones serán añadidas dinámicamente -->
+    <select id="gasfiterSelect" onchange="loadGasfiterInfo()">
+      <option value="1">Juan Pérez</option>
+      <option value="2">Sofía González</option>
+      <option value="3">Pedro Rodríguez</option>
+      <option value="4">Ana López</option>
+      <option value="5">Luis Martínez</option>
+    </select>
+    <button onclick="openScheduleModal()">Ver Calendario</button>
+  </div>
+
+
+
+</body>
+
+</html>
+<script>
+  let map, directionsService, directionsRenderer;
+  let idUsuarioLogin = 0;
+  let idGasfiterSeleccion = 0;
+  const gasfiterLocations = [];
+  const fallbackLocation = { lat: -32.796517, lng: -71.208456 };  // Ubicación fija de respaldo (casa)
+  let userLocation = null;  // Para almacenar la ubicación del usuario
+  let reservasGen;
+  function initMap() {
+    // Usar la ubicación de respaldo inicialmente para centrar el mapa
+    const centerLocation = fallbackLocation;
+
+    // Crear un nuevo mapa centrado en la ubicación de respaldo
+    map = new google.maps.Map(document.getElementById('map'));
+
+    navigator.geolocation.getCurrentPosition(function (position) {
+      var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+      map.setCenter(initialLocation);
+      map.setZoom(13);
+    }, function (positionError) {
+      map.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
+      map.setZoom(5);
+    });
+    // map = new google.maps.Map(document.getElementById("map"), {
+    //   zoom: 14,
+    //   center: centerLocation,
+    // });
+
+    // Inicializar DirectionsService y DirectionsRenderer
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      suppressMarkers: true,  // Evitar que la API agregue sus propios marcadores
+      polylineOptions: {
+        strokeColor: '#0000FF',  // Color azul para la ruta
+        strokeOpacity: 0.6,
+        strokeWeight: 5
+      }
+    });
+    directionsRenderer.setMap(map);
+
+    // Intentar obtener la ubicación real del usuario
+    getUserLocation();
+  }
+
+  // Función para obtener la ubicación del usuario
+  function getUserLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function (position) {
+        userLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        console.log('Ubicación actual del usuario obtenida:', userLocation);
+
+        // Centrar el mapa en la ubicación real del usuario
+        map.setCenter(userLocation);
+
+        // Colocar un marcador en la ubicación del usuario
+        new google.maps.Marker({
+          position: userLocation,
+          map: map,
+          label: 'U',  // Marcador para la ubicación del usuario
+        });
+
+        // Generar los gasfíteres alrededor de la ubicación real
+        generateGasfiterMarkers(userLocation);
+      }, function () {
+        console.warn('No se pudo obtener la ubicación del usuario, usando la ubicación de respaldo.');
+        userLocation = fallbackLocation;  // Usar la ubicación de respaldo si falla la geolocalización
+
+        // Generar los gasfíteres alrededor de la ubicación de respaldo
+        generateGasfiterMarkers(userLocation);
+      });
+    } else {
+      console.warn('Geolocalización no es compatible con este navegador, usando la ubicación de respaldo.');
+      userLocation = fallbackLocation;  // Usar la ubicación de respaldo si la geolocalización no es compatible
+
+      // Generar los gasfíteres alrededor de la ubicación de respaldo
+      generateGasfiterMarkers(userLocation);
+    }
+  }
+
+  // Lista de gasfíteres con datos fijos
+  const gasfiters = [
+    {
+      name: 'Juan Pérez',
+      address: 'Calle Principal 123',
+      email: 'juan.perez@gmail.com',
+      phone: '+56 9 12345678',
+      location: { lat: -32.73050, lng: -71.20383 }, // Coordenadas
+      id: 1
+    },
+    {
+      name: 'Sofía González',
+      address: 'Avenida del Sol 456',
+      email: 'sofia.gonzalez@yahoo.com',
+      phone: '+56 9 87654321',
+      location: { lat: -32.71408, lng: -71.23146 }, // Coordenadas
+      id: 2
+    },
+    {
+      name: 'Pedro Rodríguez',
+      address: 'Paseo de la Luz 789',
+      email: 'pedro.rodriguez@hotmail.com',
+      phone: '+56 9 11223344',
+      location: { lat: -32.69545, lng: -71.21238 }, // Coordenadas
+      id: 3
+    },
+    {
+      name: 'Ana López',
+      address: 'Callejón del Río 321',
+      email: 'ana.lopez@gmail.com',
+      phone: '+56 9 55667788',
+      location: { lat: -32.74885, lng: -71.21437 }, // Coordenadas
+      id: 4
+    },
+    {
+      name: 'Luis Martínez',
+      address: 'Calle Principal 654',
+      email: 'luis.martinez@gmail.com',
+      phone: '+56 9 22334455',
+      location: { lat: -32.69206, lng: -71.19529 }, // Coordenadas
+      id: 5
+    }
+  ];
+
+  // Función para generar los marcadores de gasfíteres a partir de datos fijos
+  function generateGasfiterMarkers() {
+    const select = document.getElementById('gasfiterSelect');
+
+    gasfiters.forEach(gasfiter => {
+      // Crear marcador para cada gasfíter con una ventana de información
+      const marker = new google.maps.Marker({
+        position: gasfiter.location,
+        map: map,
+        label: 'G' // Marcador de gasfíter
+      });
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+        <div>
+          <h3>${gasfiter.name}</h3>
+          <p><strong>Dirección:</strong> ${gasfiter.address}</p>
+          <p><strong>Correo:</strong> ${gasfiter.email}</p>
+          <p><strong>Teléfono:</strong> ${gasfiter.phone}</p>
+          <a href="#" onclick="openScheduleModal('${gasfiter.name}', '${gasfiter.id}')">Ver horarios</a>
+        </div>
+      `
+      });
+
+      // Mostrar la ventana de información al hacer clic en el marcador
+      marker.addListener('click', function () {
+        infoWindow.open(map, marker);
+      });
+
+      // Añadir la dirección al select para que el usuario pueda elegir
+      const option = document.createElement('option');
+      option.value = JSON.stringify(gasfiter.location);
+      option.text = `${gasfiter.name} - (${gasfiter.location.lat.toFixed(5)}, ${gasfiter.location.lng.toFixed(5)})`;
+      select.appendChild(option);
+    });
+  }
+
+  // Función para generar una ubicación aleatoria dentro de un radio
+  function getRandomLocation(center, radius) {
+    const earthRadius = 6371e3;  // Radio de la Tierra en metros
+    const lat = center.lat * Math.PI / 180;  // Convertir a radianes
+    const lng = center.lng * Math.PI / 180;
+
+    // Calcular un ángulo y distancia aleatoria dentro del radio
+    const randomDistance = Math.random() * radius;  // Distancia aleatoria dentro del radio
+    const randomAngle = Math.random() * 2 * Math.PI;  // Ángulo aleatorio en radianes
+
+    // Calcular nueva ubicación
+    const deltaLat = randomDistance * Math.cos(randomAngle) / earthRadius;
+    const deltaLng = randomDistance * Math.sin(randomAngle) / (earthRadius * Math.cos(lat));
+
+    // Convertir de nuevo a grados
+    const newLat = lat + deltaLat;
+    const newLng = lng + deltaLng;
+
+    return { lat: newLat * 180 / Math.PI, lng: newLng * 180 / Math.PI };
+  }
+
+  // Función para calcular la ruta desde la ubicación (real o de respaldo) hasta el gasfíter seleccionado
+  // Modo de viaje se pasa como parámetro (por ejemplo, 'WALKING', 'DRIVING')
+  function calculateRoute(travelMode = 'DRIVING') {
+    const select = document.getElementById('gasfiterSelect');
+    const selectedLocation = JSON.parse(select.value);  // Obtener la ubicación seleccionada
+
+    // Usar la ubicación de respaldo si la ubicación del usuario no está disponible
+    const origin = userLocation || fallbackLocation;
+
+    // Mostrar la ruta desde la ubicación real (o de respaldo) hasta el gasfíter seleccionado
+    const request = {
+      origin: origin,  // Ubicación del usuario (o de respaldo)
+      destination: selectedLocation,  // Ubicación seleccionada del gasfíter
+      travelMode: travelMode  // Modo de viaje (por defecto 'DRIVING')
+    };
+
+    // Hacer la solicitud de ruta
+    directionsService.route(request, function (result, status) {
+      if (status === 'OK') {
+        directionsRenderer.setDirections(result);  // Mostrar la ruta en el mapa
+      } else {
+        alert('No se pudo calcular la ruta: ' + status);
+      }
+    });
+  }
+
+  // Función para abrir el modal de horarios
+  function openScheduleModal(name, idGasfiter) {
+
+    idGasfiterSeleccion = idGasfiter;
+    const modal = document.getElementById('scheduleModal');
+    document.getElementById('scheduleTitle').innerText = `Horarios de ${name}`;
+    generateScheduleTable(idGasfiter);
+    modal.style.display = 'block';
+  }
+
+  // Función para generar la tabla de horarios
+  function generateScheduleTable(idGasfiter) {
+    const container = document.getElementById('scheduleContainer');
+    container.innerHTML = '';
+
+    const table = document.createElement('table');
+    table.className = 'schedule-table';
+
+    const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const hours = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+
+    // Obtener la fecha actual y ajustar para el lunes de la semana actual
+    const today = new Date();
+    const currentDay = today.getDay(); // 0 (Domingo) a 6 (Sábado)
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1)); // Ajustar al lunes
+
+    // Crear encabezado de la tabla
+    const headerRow = document.createElement('tr');
+    const emptyCell = document.createElement('th');
+    headerRow.appendChild(emptyCell);
+
+    days.forEach(day => {
+      const th = document.createElement('th');
+      th.innerText = day;
+      headerRow.appendChild(th);
+    });
+    table.appendChild(headerRow);
+
+    // Crear filas de horas
+    hours.forEach((hour) => {
+      const row = document.createElement('tr');
+      const hourCell = document.createElement('td');
+      hourCell.innerText = hour;
+      row.appendChild(hourCell);
+
+      days.forEach((day, index) => {
+        const cell = document.createElement('td');
+
+        // Calcular la fecha correspondiente
+        const cellDate = new Date(startOfWeek);
+        cellDate.setDate(startOfWeek.getDate() + index); // Sumar días al lunes
+        const [year, month, date] = [
+          cellDate.getFullYear(),
+          String(cellDate.getMonth() + 1).padStart(2, '0'),
+          String(cellDate.getDate()).padStart(2, '0')
+        ];
+
+        // Formatear hora
+        const formattedHour = `${hour}:00`;
+        const dateTime = `${year}/${month}/${date} ${formattedHour}`;
+
+        // Verificar si la celda está reservada
+        const isReserved = reservasGen.some((reserva) => {
+          return reserva.dayIndex == index + 1 && reserva.hour == hour && reserva.idGasfiter == idGasfiter;
+        });
+        // Verificar si la celda está reservada
+        const isReservedUser = reservasGen.some((reserva) => {
+          return reserva.dayIndex == index + 1 && reserva.hour == hour && reserva.idGasfiter == idGasfiter && reserva.idUsuario == idUsuarioLogin;
+        });
+        if (isReservedUser) {
+          cell.className = 'pending';
+          cell.innerText = 'Reservado';
+        }
+        else if (isReserved) {
+          cell.className = 'unavailable';
+          cell.innerText = 'No Disponible';
+        }
+        else {
+          cell.className = 'available';
+          cell.innerText = 'Disponible';
+          cell.onclick = () => toggleCell(cell);
+        }
+
+        // Agregar el texto oculto con data-datetime
+        cell.setAttribute('data-datetime', dateTime);
+
+        row.appendChild(cell);
+      });
+
+      table.appendChild(row);
+    });
+
+    container.appendChild(table);
+  }
+
+
+
+  // Función para alternar la selección de celdas de la tabla
+  function toggleCell(cell) {
+    if (cell.classList.contains('available')) {
+      cell.classList.remove('available');
+      cell.classList.add('confirmed');
+      cell.innerText = 'Confirmado';
+    } else if (cell.classList.contains('confirmed')) {
+      cell.classList.remove('confirmed');
+      cell.classList.add('available');
+      cell.innerText = 'Disponible';
+    }
+  }
+
+  // Función para cerrar el modal de horarios
+  function closeScheduleModal() {
+    document.getElementById('scheduleModal').style.display = 'none';
+  }
+  let selectedCell = null;  // Almacenar la celda seleccionada
+
+  // Función para alternar la selección de celdas de la tabla
+  function toggleCell(cell) {
+    if (cell.classList.contains('available')) {
+      // Deseleccionar cualquier celda previamente seleccionada
+      if (selectedCell) {
+        selectedCell.classList.remove('selected');
+        selectedCell.classList.add('available');
+        selectedCell.innerText = 'Disponible';
+      }
+
+      // Seleccionar la nueva celda
+      cell.classList.remove('available');
+      cell.classList.add('selected');
+      cell.innerText = 'Seleccionado';
+      selectedCell = cell;  // Guardar la celda seleccionada
+    }
+  }
+
+  // Función para confirmar y guardar el horario seleccionado
+  function confirmSchedule() {
+    if (selectedCell) {
+      // Cambiar la clase a 'confirmed' para indicar que el horario está reservado
+      selectedCell.classList.remove('selected');
+      selectedCell.classList.add('confirmed');
+      selectedCell.innerText = 'Confirmado';
+
+      // Guardar la información del horario en el backend o localmente
+      saveSchedule(selectedCell);  // Llama a una función para guardar el horario
+
+      // Resetear la selección
+      selectedCell = null;
+      alert('Horario confirmado exitosamente.');
+    } else {
+      alert('Por favor, selecciona un horario antes de confirmar.');
+    }
+  }
+
+  // Función para cerrar el modal de horarios
+  function closeScheduleModal() {
+    document.getElementById('scheduleModal').style.display = 'none';
+  }
+  // Función para transformar citas en formato reservas
+  const transformCitasToReservas = (citas) => {
+    return citas.map(cita => {
+      const fecha = new Date(cita.Fecha);
+      return {
+        dayIndex: fecha.getDay(), // Devuelve el índice del día (0 = Domingo, 6 = Sábado)
+        hour: cita.Fecha.split(' ')[1].slice(0, 5), // Extrae HH:mm de la fecha
+        idGasfiter: cita.idgasfiter,
+        idUsuario: cita.idUsuario
+      };
+    });
+  };
+
+  async function fetchReservas() {
+    try {
+      var settings = {
+        "url": "http://localhost:5000/api/citas",
+        "method": "GET",
+        "timeout": 0,
+      };
+
+      $.ajax(settings).done(function (response) {
+        console.log(response);
+
+        // Transformar citas
+        const reservas = transformCitasToReservas(response);
+        reservasGen = reservas;
+        console.log(reservas);
+
+      });
+    } catch (error) {
+      console.error('Error al obtener reservas:', error);
+    }
+  }
+
+  // Llamar a la función
+  fetchReservas();
+
+  function scheduleAppointment() {
+    // Obtener la celda seleccionada del calendario
+    const selectedCell = document.querySelector('.schedule-table td.selected');
+    console.log("idUsuarioLogin", idUsuarioLogin)
+    if (!selectedCell) {
+      alert('Por favor, selecciona una fecha y hora antes de agendar.');
+      return;
+    }
+
+    // Obtener el valor de data-datetime de la celda seleccionada
+    const selectedDateTime = selectedCell.getAttribute('data-datetime');
+
+    // Datos para el POST
+    const settings = {
+      "url": "http://localhost:5000/api/citas",
+      "method": "POST",
+      "timeout": 0,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "data": JSON.stringify({
+        "idUsuario": idUsuarioLogin, // Puedes reemplazar esto con el ID del usuario actual
+        "idgasfiter": idGasfiterSeleccion, // También puedes obtener este ID dinámicamente si lo necesitas
+        "Fecha": selectedDateTime, // Fecha obtenida de la celda seleccionada
+        "Estado": 1,
+        "calificacion": 0
+      }),
+    };
+
+    // Enviar la solicitud AJAX
+    $.ajax(settings).done(function (response) {
+      console.log(response);
+      alert('Cita agendada con éxito.');
+      selectedCell.classList.remove('selected');
+      selectedCell.classList.remove('available');
+      selectedCell.classList.add('pending');
+      selectedCell.innerText = 'Reservado';
+      fetchReservas();
+    }).fail(function (error) {
+      console.error(error);
+      alert('Hubo un error al agendar la cita.');
+    });
+  }
+
+  $(document).ready(function () {
+    $(document).ready(function () {
+      $('#login-button').click(function () {
+        const username = $('#username').val();
+        const password = $('#password').val();
+        const userType = $('#user_type').val();
+        const extractLastNumber = (str) => {
+          const match = str.match(/_(\d+)$/); // Ajustado para buscar el último número después de _
+          return match ? parseInt(match[1], 10) : null; // Convertir a número si se encuentra
+        };
+        if (
+          (username === 'usuario_1' || username === 'usuario_2' || username === 'usuario_3' || username === 'usuario_4' || username === 'usuario_5') &&
+          userType === 'usuario_cliente' &&
+          password === '1234'
+        ) {
+          $('.login-container').css('display', 'none');
+          $('#map').css('display', 'block');
+          $('#panelUbicación').css('display', 'block');
+          idUsuarioLogin = extractLastNumber(username);
+        }
+        else if ((username === 'gasfiter_1' || username === 'gasfiter_2' || username === 'gasfiter_3' || username === 'gasfiter_3' || username === 'gasfiter_3') &&
+          userType === 'usuario_gasfiter' &&
+          password === 'qwer') {
+          $('.login-container').css('display', 'none');
+          $('#panelGasfiter').css('display', 'block');
+          idUsuarioLogin = extractLastNumber(username);
+        }
+        else {
+          alert('Credenciales incorrectas o tipo de usuario no válido.');
+        }
+      });
+    });
+  });
+</script>
+
+<!-- Incluir archivo JavaScript -->
