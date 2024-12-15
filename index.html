@@ -23,13 +23,13 @@
   <div id="panelUbicación" style="display: none;">
     <h3>Seleccione un gasfíter:</h3>
     <select id="gasfiterSelect"></select>
+
     <!-- Botón para calcular la ruta caminando -->
     <button id="walkingRouteBtn" onclick="calculateRoute('WALKING')">Ruta Caminando</button>
   </div>
 
-
   <!-- Login cliente gasfiteer -->
-  <div class="login-container">
+  <div class="login-container" class="">
     <h2>Login</h2>
     <div class="form-group">
       <label for="username">Usuario:</label>
@@ -39,15 +39,19 @@
       <label for="password">Contraseña:</label>
       <input type="password" id="password" placeholder="Ingrese su contraseña">
     </div>
-    <div class="form-group">
-      <label for="user_type">Tipo de usuario:</label>
-      <select id="user_type">
-        <option value="usuario_cliente">Cliente</option>
-        <option value="usuario_gasfiter">Gasfiter</option>
-      </select>
-    </div>
     <button id="login-button">Ingresar</button>
   </div>
+
+  <!-- Pantalla principal -->
+  <div id="mainScreen" style="display: none;">
+    <h2>Bienvenido, <span id="userWelcome"></span></h2>
+    <div class="button-container">
+      <button id="btnNotifications" class="main-button">Ver Notificaciones</button>
+      <button id="btnQuickSearch" class="main-button">Búsqueda Rápida</button>
+      <button id="btnMap" class="main-button">Ver Mapa</button>
+    </div>
+  </div>
+
   <!-- Modal para la calendarización -->
   <div id="scheduleModal" class="modal">
     <div class="modal-content">
@@ -58,6 +62,7 @@
       <button id="confirmScheduleBtn" onclick="scheduleAppointment()">Agendar Horario</button>
     </div>
   </div>
+  <!-- Modal para la calendarización -->
   <div id="panelGasfiter" style="display: none;">
     <h3>Seleccione un gasfíter:</h3>
     <!-- Opciones serán añadidas dinámicamente -->
@@ -70,9 +75,46 @@
     </select>
     <button onclick="openScheduleModal()">Ver Calendario</button>
   </div>
-
-
-
+  <!-- Listado agendados -->
+  <div id="listadoGasfiter"
+    style="display: none; width: 100%; height: 100vh; overflow-y: auto; border: none; padding: 0; margin: 0;">
+    <h2
+      style="font-family: Arial, sans-serif; text-align: center; margin: 20px 0; font-size: 1.5em; font-weight: bold;">
+      Tabla de Gasfíteres</h2>
+    <table
+      style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 1em; text-align: left;">
+      <thead style="background-color: #007bff; color: white; position: sticky; top: 0; z-index: 1;">
+        <tr>
+          <th style="padding: 15px; border-bottom: 1px solid #ddd;">Gasfíter</th>
+          <th style="padding: 15px; border-bottom: 1px solid #ddd;">Fecha</th>
+          <th style="padding: 15px; border-bottom: 1px solid #ddd;">Hora</th>
+          <th style="padding: 15px; border-bottom: 1px solid #ddd;">Estado</th>
+        </tr>
+      </thead>
+      <tbody id="citasTableBody" style="overflow-y: auto;">
+        <!-- Filas generadas dinámicamente -->
+      </tbody>
+    </table>
+  </div>
+  <!--listado de horas disponibles-->
+  <div id="tablaAgendar" style="display: none; width: 100%; height: auto; margin: 0 auto; padding: 20px;">
+    <h2
+      style="font-family: Arial, sans-serif; text-align: center; margin: 20px 0; font-size: 1.5em; font-weight: bold;">
+      Tabla de Agendamientos</h2>
+    <table
+      style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 1em; text-align: left; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">
+      <thead style="background-color: #007bff; color: white; position: sticky; top: 0; z-index: 1;">
+        <tr>
+          <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Hora</th>
+          <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Nombre</th>
+          <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd; text-align: center;">Agendar</th>
+        </tr>
+      </thead>
+      <tbody id="agendarTableBody">
+        <!-- Filas generadas dinámicamente -->
+      </tbody>
+    </table>
+  </div>
 </body>
 
 </html>
@@ -280,12 +322,75 @@
     directionsService.route(request, function (result, status) {
       if (status === 'OK') {
         directionsRenderer.setDirections(result);  // Mostrar la ruta en el mapa
+
+        // Obtener la distancia usando DistanceMatrixService
+        const distanceService = new google.maps.DistanceMatrixService();
+        distanceService.getDistanceMatrix(
+          {
+            origins: [origin], // Punto de partida
+            destinations: [selectedLocation], // Destino
+            travelMode: travelMode, // Modo de transporte
+          },
+          function (response, status) {
+            if (status === 'OK') {
+              const distance = response.rows[0].elements[0].distance.text; // Distancia en texto (ejemplo: "12.3 km")
+              const duration = response.rows[0].elements[0].duration.text; // Duración en texto (ejemplo: "15 mins")
+
+              alert(`Distancia: ${distance}, Tiempo estimado: ${duration}`);
+              console.log(`Distancia: ${distance}, Tiempo estimado: ${duration}`);
+            } else {
+              console.error('Error al obtener la distancia: ' + status);
+            }
+          }
+        );
       } else {
         alert('No se pudo calcular la ruta: ' + status);
       }
     });
   }
+  function calculateRoutegasfiter(travelMode = 'DRIVING', selectedLocation) {
 
+    // Usar la ubicación de respaldo si la ubicación del usuario no está disponible
+    const origin = userLocation || fallbackLocation;
+
+    // Mostrar la ruta desde la ubicación real (o de respaldo) hasta el gasfíter seleccionado
+    const request = {
+      origin: origin,  // Ubicación del usuario (o de respaldo)
+      destination: selectedLocation,  // Ubicación seleccionada del gasfíter
+      travelMode: travelMode  // Modo de viaje (por defecto 'DRIVING')
+    };
+
+    // Hacer la solicitud de ruta
+    directionsService.route(request, function (result, status) {
+      if (status === 'OK') {
+        directionsRenderer.setDirections(result);  // Mostrar la ruta en el mapa
+
+        // Obtener la distancia usando DistanceMatrixService
+        const distanceService = new google.maps.DistanceMatrixService();
+        distanceService.getDistanceMatrix(
+          {
+            origins: [origin], // Punto de partida
+            destinations: [selectedLocation], // Destino
+            travelMode: travelMode, // Modo de transporte
+          },
+          function (response, status) {
+            if (status === 'OK') {
+              const distance = response.rows[0].elements[0].distance.text; // Distancia en texto (ejemplo: "12.3 km")
+              const duration = response.rows[0].elements[0].duration.text; // Duración en texto (ejemplo: "15 mins")
+
+              //alert(`Distancia: ${distance}, Tiempo estimado: ${duration}`);
+              console.log(`Distancia: ${distance}, Tiempo estimado: ${duration}`);
+              return { distance: distance, duration: duration }
+            } else {
+              console.error('Error al obtener la distancia: ' + status);
+            }
+          }
+        );
+      } else {
+        alert('No se pudo calcular la ruta: ' + status);
+      }
+    });
+  }
   // Función para abrir el modal de horarios
   function openScheduleModal(name, idGasfiter) {
 
@@ -452,7 +557,9 @@
         dayIndex: fecha.getDay(), // Devuelve el índice del día (0 = Domingo, 6 = Sábado)
         hour: cita.Fecha.split(' ')[1].slice(0, 5), // Extrae HH:mm de la fecha
         idGasfiter: cita.idgasfiter,
-        idUsuario: cita.idUsuario
+        idUsuario: cita.idUsuario,
+        fecha: cita.Fecha,
+        estado: cita.Estado
       };
     });
   };
@@ -526,39 +633,190 @@
     });
   }
 
+
   $(document).ready(function () {
-    $(document).ready(function () {
-      $('#login-button').click(function () {
-        const username = $('#username').val();
-        const password = $('#password').val();
-        const userType = $('#user_type').val();
-        const extractLastNumber = (str) => {
-          const match = str.match(/_(\d+)$/); // Ajustado para buscar el último número después de _
-          return match ? parseInt(match[1], 10) : null; // Convertir a número si se encuentra
-        };
-        if (
-          (username === 'usuario_1' || username === 'usuario_2' || username === 'usuario_3' || username === 'usuario_4' || username === 'usuario_5') &&
-          userType === 'usuario_cliente' &&
-          password === '1234'
-        ) {
-          $('.login-container').css('display', 'none');
-          $('#map').css('display', 'block');
-          $('#panelUbicación').css('display', 'block');
-          idUsuarioLogin = extractLastNumber(username);
+    $('#login-button').click(function () {
+      const username = $('#username').val();
+      const password = $('#password').val();
+
+      const extractLastNumber = (str) => {
+        const match = str.match(/_(\d+)$/); // Ajustado para buscar el último número después de _
+        return match ? parseInt(match[1], 10) : null; // Convertir a número si se encuentra
+      };
+      if (
+        (username === 'usuario_1' || username === 'usuario_2' || username === 'usuario_3' || username === 'usuario_4' || username === 'usuario_5') &&
+
+        password === '1234'
+      ) {
+        $('.login-container').css('display', 'none');
+        $('#mainScreen').css('display', 'block');
+        idUsuarioLogin = extractLastNumber(username);
+      }
+      else if ((username === 'gasfiter_1' || username === 'gasfiter_2' || username === 'gasfiter_3' || username === 'gasfiter_3' || username === 'gasfiter_3') &&
+
+        password === 'qwer') {
+        $('.login-container').css('display', 'none');
+        $('#panelGasfiter').css('display', 'block');
+        idUsuarioLogin = extractLastNumber(username);
+      }
+      else {
+        alert('Credenciales incorrectas o tipo de usuario no válido.');
+      }
+    });
+    $('#btnMap').click(function () {
+      $('#map').css('display', 'block');
+      $('#mainScreen').css('display', 'none');
+    });
+    $('#btnNotifications').click(function () {
+      $('#listadoGasfiter').css('display', 'block');
+      $('#mainScreen').css('display', 'none');
+      const tableBody = document.getElementById('citasTableBody');
+
+      reservasGen.forEach((reservasGen, index) => {
+        const gasfiter = gasfiters.find((g) => g.id === parseInt(reservasGen.idGasfiter));
+        const dateParts = reservasGen.fecha.split(' ');
+        const fecha = dateParts[0]; // Fecha en formato YYYY/MM/DD
+        const hora = dateParts[1]; // Hora en formato HH:mm:ss
+        if (reservasGen.idUsuario == idUsuarioLogin) {
+          let estadoIcon = '';
+          switch (reservasGen.estado) {
+            case '1':
+              estadoIcon = `<span style="color: green; font-weight: bold;">✅</span>`;
+              break;
+            case '2':
+              estadoIcon = `<span style="color: gray; font-weight: bold;">➖</span>`;
+              break;
+            default:
+              estadoIcon = `<span style="color: red; font-weight: bold;">❌</span>`;
+          }
+
+          const row = `
+        <tr style="background-color: ${index % 2 === 0 ? 'white' : '#f2f2f2'};">
+          <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${gasfiter ? gasfiter.name : 'Desconocido'}</td>
+          <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${fecha}</td>
+          <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${hora}</td>
+          <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${estadoIcon}</td>
+        </tr>
+      `;
+          tableBody.innerHTML += row;
         }
-        else if ((username === 'gasfiter_1' || username === 'gasfiter_2' || username === 'gasfiter_3' || username === 'gasfiter_3' || username === 'gasfiter_3') &&
-          userType === 'usuario_gasfiter' &&
-          password === 'qwer') {
-          $('.login-container').css('display', 'none');
-          $('#panelGasfiter').css('display', 'block');
-          idUsuarioLogin = extractLastNumber(username);
-        }
-        else {
-          alert('Credenciales incorrectas o tipo de usuario no válido.');
-        }
+
       });
     });
+    $('#btnQuickSearch').click(function () {
+      $('#tablaAgendar').css('display', 'block');
+      $('#mainScreen').css('display', 'none');
+      generarListadoGasfiterRapido();
+    });
+    
   });
-</script>
+  function generarListadoGasfiterRapido() {
+      // Datos de ejemplo
+      const horasFalsas = ['01:00'];
 
-<!-- Incluir archivo JavaScript -->
+      const fechaActual = new Date().toISOString().split('T')[0]; // Obtener la fecha actual en formato YYYY-MM-DD
+      const dayIndexActual = new Date().getDay(); // Obtener el índice del día actual (0 = Domingo, 6 = Sábado)
+      const resultados = [];
+
+      horasFalsas.forEach((hora) => {
+        gasfiters.forEach((gasfiter) => {
+          // Buscar si hay alguna reserva para este gasfiter en la fecha y hora actuales
+          const registro = reservasGen.find((entry) => {
+            return (
+              entry.dayIndex === dayIndexActual && // Verificar que sea el mismo día de la semana
+              entry.hour === hora && // Verificar la hora
+              entry.idGasfiter == gasfiter.id // Verificar el gasfiter
+            );
+          });
+
+          // Si no hay un registro para este gasfiter y hora, añadirlo al listado
+          if (!registro) {
+            resultados.push({
+              hora,
+              nombre: gasfiter.name,
+              idGasfiter: gasfiter.id,
+            });
+          }
+        });
+      });
+
+      // Ahora puedes iterar por `resultados` para mostrar la tabla
+      const agendarTableBody = document.getElementById('agendarTableBody');
+      agendarTableBody.innerHTML = ''; // Limpiar el contenido previo
+
+      resultados.forEach((resultado, index) => {
+        const row = `
+<tr style="background-color: ${index % 2 === 0 ? 'white' : '#f2f2f2'};">
+<td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${resultado.hora}</td>
+<td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${resultado.nombre}</td>
+<td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">
+<button 
+style="
+  background-color: #007bff; 
+  color: white; 
+  border: none; 
+  border-radius: 5px; 
+  padding: 10px; 
+  cursor: pointer;
+" 
+onclick="insertGastiferIdHour(${resultado.idGasfiter},'${resultado.hora}', this)">
+📅
+</button>
+</td>
+</tr>
+`;
+        agendarTableBody.innerHTML += row; // Agregar fila a la tabla
+      });
+
+    }
+    async function insertGastiferIdHour(idGasfiter, hora, button) {
+      // Obtener el valor de data-datetime de la celda seleccionada
+      const selDateTime = addHour(hora); // Añade la hora a la fecha actual
+
+      // Datos para el POST
+      const settings = {
+        "url": "http://localhost:5000/api/citas",
+        "method": "POST",
+        "timeout": 0,
+        "headers": {
+          "Content-Type": "application/json",
+        },
+        "data": JSON.stringify({
+          "idUsuario": idUsuarioLogin, // Puedes reemplazar esto con el ID del usuario actual
+          "idgasfiter": idGasfiter, // También puedes obtener este ID dinámicamente si lo necesitas
+          "Fecha": selDateTime, // Fecha obtenida de la celda seleccionada
+          "Estado": 1,
+          "calificacion": 0
+        }),
+      };
+
+      // Enviar la solicitud AJAX
+      $.ajax(settings).done(function (response) {
+        console.log(response);
+        alert('Cita agendada con éxito.');
+// Eliminar la fila del botón presionado
+        const row = button.closest('tr'); // Acceder a la fila padre del botón
+        row.remove(); // Eliminar la fila del DOM
+      }).fail(function (error) {
+        console.error(error);
+        alert('Hubo un error al agendar la cita.');
+      });
+    }
+    function addHour(hora) {
+      const [hours, minutes] = hora.split(':'); // Separar horas y minutos
+      const now = new Date(); // Obtener la fecha actual
+      now.setHours(parseInt(hours, 10)); // Establecer las horas
+      now.setMinutes(parseInt(minutes, 10)); // Establecer los minutos
+      now.setSeconds(0, 0); // Establecer los segundos a 0
+
+      // Formatear la fecha como YYYY/MM/DD HH:mm:ss
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0'); // Mes comienza en 0
+      const day = String(now.getDate()).padStart(2, '0');
+      const formattedHour = String(now.getHours()).padStart(2, '0');
+      const formattedMinutes = String(now.getMinutes()).padStart(2, '0');
+      const formattedSeconds = String(now.getSeconds()).padStart(2, '0');
+
+      return `${year}/${month}/${day} ${formattedHour}:${formattedMinutes}:${formattedSeconds}`;
+    }
+</script>

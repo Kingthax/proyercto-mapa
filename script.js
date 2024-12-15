@@ -393,7 +393,7 @@ function scheduleAppointment() {
 
 $(document).ready(function () {
   $(document).ready(function () {
-    $('#login-button').click(function () {
+    $('#login-button').click(function) () 
       const username = $('#username').val();
       const password = $('#password').val();
       const userType = $('#user_type').val();
@@ -415,6 +415,28 @@ $(document).ready(function () {
       else {
         alert('Credenciales incorrectas o tipo de usuario no válido.');
       }
+      
+       // Mostrar pantalla principal
+       $('#mainScreen').css('display', 'block');
+
+       // Opcional: mostrar mensaje de bienvenida
+       $('#userWelcome').text(`Bienvenido, ${username}`);
+     } 
+    
+      // Manejar botones de la pantalla principal
+      $('#btnNotifications').click(function () {
+        alert('Notificaciones: Aquí podrás ver información de reuniones agendadas.');
+      });
+    
+      $('#btnQuickSearch').click(function () {
+        alert('Búsqueda Rápida: Mostrará los próximos horarios disponibles.');
+      });
+    
+      $('#btnMap').click(function () {
+        $('#mainScreen').css('display', 'none'); // Ocultar pantalla principal
+        $('#map').css('display', 'block'); // Mostrar mapa
+        $('#panelUbicación').css('display', 'block'); // Mostrar panel de ubicación
+      });
     });
-  });
-});
+ 
+ 
