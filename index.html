@@ -107,6 +107,7 @@
         <tr>
           <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Hora</th>
           <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Nombre</th>
+          <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Tiempo Estimado</th>
           <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd; text-align: center;">Agendar</th>
         </tr>
       </thead>
@@ -201,7 +202,7 @@
   }
 
   // Lista de gasfíteres con datos fijos
-  const gasfiters = [
+  let gasfiters = [
     {
       name: 'Juan Pérez',
       address: 'Calle Principal 123',
@@ -349,46 +350,33 @@
     });
   }
   function calculateRoutegasfiter(travelMode = 'DRIVING', selectedLocation) {
+    return new Promise((resolve, reject) => { // Define y retorna la Promesa
+      const origin = userLocation || fallbackLocation;
 
-    // Usar la ubicación de respaldo si la ubicación del usuario no está disponible
-    const origin = userLocation || fallbackLocation;
+      const request = {
+        origin: origin,
+        destination: selectedLocation,
+        travelMode: travelMode,
+      };
 
-    // Mostrar la ruta desde la ubicación real (o de respaldo) hasta el gasfíter seleccionado
-    const request = {
-      origin: origin,  // Ubicación del usuario (o de respaldo)
-      destination: selectedLocation,  // Ubicación seleccionada del gasfíter
-      travelMode: travelMode  // Modo de viaje (por defecto 'DRIVING')
-    };
-
-    // Hacer la solicitud de ruta
-    directionsService.route(request, function (result, status) {
-      if (status === 'OK') {
-        directionsRenderer.setDirections(result);  // Mostrar la ruta en el mapa
-
-        // Obtener la distancia usando DistanceMatrixService
-        const distanceService = new google.maps.DistanceMatrixService();
-        distanceService.getDistanceMatrix(
-          {
-            origins: [origin], // Punto de partida
-            destinations: [selectedLocation], // Destino
-            travelMode: travelMode, // Modo de transporte
-          },
-          function (response, status) {
-            if (status === 'OK') {
-              const distance = response.rows[0].elements[0].distance.text; // Distancia en texto (ejemplo: "12.3 km")
-              const duration = response.rows[0].elements[0].duration.text; // Duración en texto (ejemplo: "15 mins")
-
-              //alert(`Distancia: ${distance}, Tiempo estimado: ${duration}`);
-              console.log(`Distancia: ${distance}, Tiempo estimado: ${duration}`);
-              return { distance: distance, duration: duration }
-            } else {
-              console.error('Error al obtener la distancia: ' + status);
-            }
+      // Inicializa el DistanceMatrixService
+      const distanceService = new google.maps.DistanceMatrixService();
+      distanceService.getDistanceMatrix(
+        {
+          origins: [origin],
+          destinations: [selectedLocation],
+          travelMode: travelMode,
+        },
+        function (response, status) {
+          if (status === 'OK') {
+            const distance = response.rows[0].elements[0].distance.text; // Ejemplo: "12.3 km"
+            const duration = response.rows[0].elements[0].duration.text; // Ejemplo: "15 mins"
+            resolve({ distance, duration }); // Devuelve un objeto con distancia y duración
+          } else {
+            reject(`Error al obtener la distancia: ${status}`); // Manejo de error
           }
-        );
-      } else {
-        alert('No se pudo calcular la ruta: ' + status);
-      }
+        }
+      );
     });
   }
   // Función para abrir el modal de horarios
@@ -703,120 +691,154 @@
 
       });
     });
-    $('#btnQuickSearch').click(function () {
+    $('#btnQuickSearch').click(async function () {
       $('#tablaAgendar').css('display', 'block');
       $('#mainScreen').css('display', 'none');
-      generarListadoGasfiterRapido();
+      await updateGasfitersWithDistance();
+      await generarListadoGasfiterRapido();
     });
-    
+
   });
   function generarListadoGasfiterRapido() {
-      // Datos de ejemplo
-      const horasFalsas = ['01:00'];
-
-      const fechaActual = new Date().toISOString().split('T')[0]; // Obtener la fecha actual en formato YYYY-MM-DD
-      const dayIndexActual = new Date().getDay(); // Obtener el índice del día actual (0 = Domingo, 6 = Sábado)
-      const resultados = [];
-
-      horasFalsas.forEach((hora) => {
-        gasfiters.forEach((gasfiter) => {
-          // Buscar si hay alguna reserva para este gasfiter en la fecha y hora actuales
-          const registro = reservasGen.find((entry) => {
-            return (
-              entry.dayIndex === dayIndexActual && // Verificar que sea el mismo día de la semana
-              entry.hour === hora && // Verificar la hora
-              entry.idGasfiter == gasfiter.id // Verificar el gasfiter
-            );
-          });
-
-          // Si no hay un registro para este gasfiter y hora, añadirlo al listado
-          if (!registro) {
-            resultados.push({
-              hora,
-              nombre: gasfiter.name,
-              idGasfiter: gasfiter.id,
-            });
-          }
-        });
-      });
-
-      // Ahora puedes iterar por `resultados` para mostrar la tabla
-      const agendarTableBody = document.getElementById('agendarTableBody');
-      agendarTableBody.innerHTML = ''; // Limpiar el contenido previo
-
-      resultados.forEach((resultado, index) => {
-        const row = `
-<tr style="background-color: ${index % 2 === 0 ? 'white' : '#f2f2f2'};">
-<td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${resultado.hora}</td>
-<td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${resultado.nombre}</td>
-<td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">
-<button 
-style="
-  background-color: #007bff; 
-  color: white; 
-  border: none; 
-  border-radius: 5px; 
-  padding: 10px; 
-  cursor: pointer;
-" 
-onclick="insertGastiferIdHour(${resultado.idGasfiter},'${resultado.hora}', this)">
-📅
-</button>
-</td>
-</tr>
-`;
-        agendarTableBody.innerHTML += row; // Agregar fila a la tabla
-      });
-
+  // Función auxiliar para convertir "1 h 5 min" a minutos
+  function convertirDurationAMinutos(duration) {
+    let totalMinutos = 0;
+    if (duration.includes('h')) {
+      const [horas, resto] = duration.split('h');
+      totalMinutos += parseInt(horas.trim()) * 60;
+      if (resto) totalMinutos += parseInt(resto.replace('min', '').trim());
+    } else {
+      totalMinutos += parseInt(duration.replace('min', '').trim());
     }
-    async function insertGastiferIdHour(idGasfiter, hora, button) {
-      // Obtener el valor de data-datetime de la celda seleccionada
-      const selDateTime = addHour(hora); // Añade la hora a la fecha actual
+    return totalMinutos;
+  }
 
-      // Datos para el POST
-      const settings = {
-        "url": "http://localhost:5000/api/citas",
-        "method": "POST",
-        "timeout": 0,
-        "headers": {
-          "Content-Type": "application/json",
-        },
-        "data": JSON.stringify({
-          "idUsuario": idUsuarioLogin, // Puedes reemplazar esto con el ID del usuario actual
-          "idgasfiter": idGasfiter, // También puedes obtener este ID dinámicamente si lo necesitas
-          "Fecha": selDateTime, // Fecha obtenida de la celda seleccionada
-          "Estado": 1,
-          "calificacion": 0
-        }),
-      };
+  // Ordenar gasfiters por duración de menor a mayor
+  const gasfitersOrdenados = gasfiters.sort((a, b) => {
+    const duracionA = convertirDurationAMinutos(a.duration || "0 min"); // Aseguramos un valor por defecto
+    const duracionB = convertirDurationAMinutos(b.duration || "0 min");
+    return duracionA - duracionB;
+  });
 
-      // Enviar la solicitud AJAX
-      $.ajax(settings).done(function (response) {
-        console.log(response);
-        alert('Cita agendada con éxito.');
-// Eliminar la fila del botón presionado
-        const row = button.closest('tr'); // Acceder a la fila padre del botón
-        row.remove(); // Eliminar la fila del DOM
-      }).fail(function (error) {
-        console.error(error);
-        alert('Hubo un error al agendar la cita.');
+  const ahora = new Date();
+  ahora.setHours(ahora.getHours() + 1); // Añadir una hora
+  ahora.setMinutes(0, 0, 0); // Reiniciar los minutos y segundos a 00
+  const horaSiguiente = ahora.toTimeString().slice(0, 5);
+
+  const fechaActual = new Date().toISOString().split('T')[0];
+  const dayIndexActual = new Date().getDay();
+  const resultados = [];
+
+  // Buscar resultados sin reservas para la hora siguiente
+  gasfitersOrdenados.forEach((gasfiter) => {
+    const registro = reservasGen.find((entry) => {
+      return (
+        entry.dayIndex === dayIndexActual &&
+        entry.hour === horaSiguiente &&
+        entry.idGasfiter == gasfiter.id
+      );
+    });
+
+    if (!registro) {
+      resultados.push({
+        hora: horaSiguiente,
+        nombre: gasfiter.name,
+        idGasfiter: gasfiter.id,
+        horaEstimada: gasfiter.duration,
       });
     }
-    function addHour(hora) {
-      const [hours, minutes] = hora.split(':'); // Separar horas y minutos
-      const now = new Date(); // Obtener la fecha actual
-      now.setHours(parseInt(hours, 10)); // Establecer las horas
-      now.setMinutes(parseInt(minutes, 10)); // Establecer los minutos
-      now.setSeconds(0, 0); // Establecer los segundos a 0
+  });
 
-      // Formatear la fecha como YYYY/MM/DD HH:mm:ss
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0'); // Mes comienza en 0
-      const day = String(now.getDate()).padStart(2, '0');
-      const formattedHour = String(now.getHours()).padStart(2, '0');
-      const formattedMinutes = String(now.getMinutes()).padStart(2, '0');
-      const formattedSeconds = String(now.getSeconds()).padStart(2, '0');
+  // Insertar en la tabla
+  const agendarTableBody = document.getElementById('agendarTableBody');
+  agendarTableBody.innerHTML = ''; // Limpiar el contenido previo
 
-      return `${year}/${month}/${day} ${formattedHour}:${formattedMinutes}:${formattedSeconds}`;
+  resultados.forEach((resultado, index) => {
+    const row = `
+      <tr style="background-color: ${index % 2 === 0 ? 'white' : '#f2f2f2'};">
+        <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${resultado.hora}</td>
+        <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${resultado.nombre}</td>
+        <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${resultado.horaEstimada}</td>
+        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">
+          <button 
+            style="background-color: #007bff; color: white; border: none; border-radius: 5px; padding: 10px; cursor: pointer;" 
+            onclick="insertGastiferIdHour(${resultado.idGasfiter}, '${resultado.hora}', this)">
+            📅
+          </button>
+        </td>
+      </tr>
+    `;
+    agendarTableBody.innerHTML += row;
+  });
+
+  console.log("Gasfiters ordenados:", gasfitersOrdenados);
+}
+  async function insertGastiferIdHour(idGasfiter, hora, button) {
+    // Obtener el valor de data-datetime de la celda seleccionada
+    const selDateTime = addHour(hora); // Añade la hora a la fecha actual
+
+    // Datos para el POST
+    const settings = {
+      "url": "http://localhost:5000/api/citas",
+      "method": "POST",
+      "timeout": 0,
+      "headers": {
+        "Content-Type": "application/json",
+      },
+      "data": JSON.stringify({
+        "idUsuario": idUsuarioLogin, // Puedes reemplazar esto con el ID del usuario actual
+        "idgasfiter": idGasfiter, // También puedes obtener este ID dinámicamente si lo necesitas
+        "Fecha": selDateTime, // Fecha obtenida de la celda seleccionada
+        "Estado": 1,
+        "calificacion": 0
+      }),
+    };
+
+    // Enviar la solicitud AJAX
+    $.ajax(settings).done(function (response) {
+      console.log(response);
+      alert('Cita agendada con éxito.');
+      // Eliminar la fila del botón presionado
+      const row = button.closest('tr'); // Acceder a la fila padre del botón
+      row.remove(); // Eliminar la fila del DOM
+    }).fail(function (error) {
+      console.error(error);
+      alert('Hubo un error al agendar la cita.');
+    });
+  }
+  function addHour(hora) {
+    const [hours, minutes] = hora.split(':'); // Separar horas y minutos
+    const now = new Date(); // Obtener la fecha actual
+    now.setHours(parseInt(hours, 10)); // Establecer las horas
+    now.setMinutes(parseInt(minutes, 10)); // Establecer los minutos
+    now.setSeconds(0, 0); // Establecer los segundos a 0
+
+    // Formatear la fecha como YYYY/MM/DD HH:mm:ss
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // Mes comienza en 0
+    const day = String(now.getDate()).padStart(2, '0');
+    const formattedHour = String(now.getHours()).padStart(2, '0');
+    const formattedMinutes = String(now.getMinutes()).padStart(2, '0');
+    const formattedSeconds = String(now.getSeconds()).padStart(2, '0');
+
+    return `${year}/${month}/${day} ${formattedHour}:${formattedMinutes}:${formattedSeconds}`;
+  }
+  // Función para actualizar los objetos en `gasfiters` con distancia y duración
+  async function updateGasfitersWithDistance() {
+    for (const gasfiter of gasfiters) {
+      try {
+        const result = await calculateRoutegasfiter('WALKING', gasfiter.location); // Espera los datos de distancia y duración
+        gasfiter.distance = result.distance; // Agregar distancia al objeto
+        gasfiter.duration = result.duration; // Agregar duración al objeto
+        console.log(`Actualizado: ${gasfiter.name} -> Distancia: ${result.distance}, Duración: ${result.duration}`);
+      } catch (error) {
+        console.error(`Error actualizando ${gasfiter.name}: ${error}`);
+      }
     }
+
+    console.log('Todos los gasfiters actualizados:', gasfiters);
+  }
+
+  // Llama a la función para actualizar la lista de gasfiters
+
 </script>
