@@ -16,6 +16,71 @@
 </head>
 
 <body>
+  <div style="
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #555555;
+  color: white;
+  padding: 10px 20px;
+  z-index: 1000;
+  box-sizing: border-box;
+  height: 60px;">
+
+    <!-- Botón Volver -->
+    <button id="backButton" style="
+    background-color: #444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    text-align: center;
+    visibility: hidden;">
+      &#8592; Volver
+    </button>
+    <!-- Botón Volver -->
+    <button id="backCerrarSesion" style="
+    background-color: #444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    text-align: center;
+    visibility: hidden;">
+      &#8592; cerrar sesión
+    </button>
+    <!-- Título centrado -->
+    <span style="
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 20px;
+    font-weight: bold;
+    font-family: Arial, sans-serif;
+    text-align: center;">
+      HOGAR EN APUROS
+    </span>
+
+    <!-- Usuario Iniciado -->
+    <span style="
+    font-size: 16px;
+    font-weight: bold;
+    font-family: Arial, sans-serif;
+    text-align: right;
+    visibility: hidden;">
+      Usuario_1
+    </span>
+  </div>
   <!-- Contenedor donde se mostrará el mapa -->
   <div id="map" style="display: none;"></div>
 
@@ -62,20 +127,6 @@
       <button id="confirmScheduleBtn" onclick="scheduleAppointment()">Agendar Horario</button>
     </div>
   </div>
-  <!-- Modal para la calendarización -->
-  <div id="panelGasfiter" style="display: none;">
-    <h3>Seleccione un gasfíter:</h3>
-    <!-- Opciones serán añadidas dinámicamente -->
-    <select id="gasfiterSelect" onchange="loadGasfiterInfo()">
-      <option value="1">Juan Pérez</option>
-      <option value="2">Sofía González</option>
-      <option value="3">Pedro Rodríguez</option>
-      <option value="4">Ana López</option>
-      <option value="5">Luis Martínez</option>
-    </select>
-    <button onclick="openScheduleModal()">Ver Calendario</button>
-  </div>
-  <!-- Listado agendados -->
   <div id="listadoGasfiter"
     style="display: none; width: 100%; height: 100vh; overflow-y: auto; border: none; padding: 0; margin: 0;">
     <h2
@@ -116,12 +167,35 @@
       </tbody>
     </table>
   </div>
+  <div id="tablaChamba" style="display: none; width: 100%; height: auto; margin: 0 auto; padding: 20px;">
+    <h2
+      style="font-family: Arial, sans-serif; text-align: center; margin: 20px 0; font-size: 1.5em; font-weight: bold;">
+      Tabla de Chamba</h2>
+    <table
+      style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 1em; text-align: left; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">
+      <thead style="background-color: #007bff; color: white; position: sticky; top: 0; z-index: 1;">
+        <tr>
+          <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Hora</th>
+          <th style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">Ruta</th>
+          <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Nombre</th>
+          <th style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">Estado</th>
+          <th style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">Extensión</th>
+        </tr>
+      </thead>
+      <tbody id="chambaTableBody">
+        <!-- Filas dinámicas -->
+      </tbody>
+    </table>
+  </div>
+</body>
+
+</html>
 </body>
 
 </html>
 <script>
   let map, directionsService, directionsRenderer;
-  let idUsuarioLogin = 0;
+  let idUsuarioLogin = 0, idGasfiterLogin = 0;
   let idGasfiterSeleccion = 0;
   const gasfiterLocations = [];
   const fallbackLocation = { lat: -32.796517, lng: -71.208456 };  // Ubicación fija de respaldo (casa)
@@ -135,11 +209,11 @@
     map = new google.maps.Map(document.getElementById('map'));
 
     navigator.geolocation.getCurrentPosition(function (position) {
-      var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+      var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);// {-32.7206119, -71.2042502}
       map.setCenter(initialLocation);
       map.setZoom(13);
     }, function (positionError) {
-      map.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
+      map.setCenter(new google.maps.LatLng(39.8097343, -123.5556199));
       map.setZoom(5);
     });
     // map = new google.maps.Map(document.getElementById("map"), {
@@ -200,7 +274,49 @@
       generateGasfiterMarkers(userLocation);
     }
   }
-
+  // Lista de Usuarios con datos fijos
+  let usuarios = [
+    {
+      name: 'Fabian Quintanilla',
+      address: 'Calle Principal 123',
+      email: 'fab.quintanilla@gmail.com',
+      phone: '+56 9 12345678',
+      location: { lat: -32.7206119, lng: -71.2042502 },
+      id: 1
+    },
+    {
+      name: 'Jonathan Quintanilla',
+      address: 'Avenida del Sol 456',
+      email: 'jon.quintanillac@gmail.com',
+      phone: '+56 9 87654321',
+      location: { lat: -32.7206119, lng: -71.2042502 },
+      id: 2
+    },
+    {
+      name: 'Rodrigo Tapia',
+      address: 'Paseo de la Luz 789',
+      email: 'pedro.rodriguez@hotmail.com',
+      phone: '+56 9 11223344',
+      location: { lat: -32.7206119, lng: -71.2042502 },
+      id: 3
+    },
+    {
+      name: 'Camilo Leiva',
+      address: 'Callejón del Río 321',
+      email: 'ana.lopez@gmail.com',
+      phone: '+56 9 55667788',
+      location: { lat: -32.7206119, lng: -71.2042502 },
+      id: 4
+    },
+    {
+      name: 'Anival Gajardo',
+      address: 'Calle Principal 654',
+      email: 'luis.martinez@gmail.com',
+      phone: '+56 9 22334455',
+      location: { lat: -32.7206119, lng: -71.2042502 },
+      id: 5
+    }
+  ];
   // Lista de gasfíteres con datos fijos
   let gasfiters = [
     {
@@ -638,6 +754,10 @@
       ) {
         $('.login-container').css('display', 'none');
         $('#mainScreen').css('display', 'block');
+        $('#backCerrarSesion').css('visibility', 'visible');
+        $('#backCerrarSesion').css('display', 'block');
+        $('#backButton').css('display', 'none');
+        $('#password').val("");
         idUsuarioLogin = extractLastNumber(username);
       }
       else if ((username === 'gasfiter_1' || username === 'gasfiter_2' || username === 'gasfiter_3' || username === 'gasfiter_3' || username === 'gasfiter_3') &&
@@ -645,7 +765,14 @@
         password === 'qwer') {
         $('.login-container').css('display', 'none');
         $('#panelGasfiter').css('display', 'block');
-        idUsuarioLogin = extractLastNumber(username);
+        $('#backCerrarSesion').css('visibility', 'visible');
+        $('#backCerrarSesion').css('display', 'block');
+        $('#backButton').css('display', 'none');
+        $('#password').val("");
+        $('#tablaChamba').css('display', 'block');
+        // Llamada inicial
+        idGasfiterLogin = extractLastNumber(username);
+        renderizarTablaChamba();
       }
       else {
         alert('Credenciales incorrectas o tipo de usuario no válido.');
@@ -654,10 +781,19 @@
     $('#btnMap').click(function () {
       $('#map').css('display', 'block');
       $('#mainScreen').css('display', 'none');
+      $('#backButton').css('visibility', 'visible');
+      $('#backButton').css('display', 'block');
+      $('#backCerrarSesion').css('display', 'none');
+      $('#backCerrarSesion').css('visibility', 'hidden');
     });
     $('#btnNotifications').click(function () {
       $('#listadoGasfiter').css('display', 'block');
       $('#mainScreen').css('display', 'none');
+      $('#backButton').css('visibility', 'visible');
+      $('#backButton').css('display', 'block');
+      $('#backCerrarSesion').css('display', 'none');
+      $('#backCerrarSesion').css('visibility', 'hidden');
+
       const tableBody = document.getElementById('citasTableBody');
 
       reservasGen.forEach((reservasGen, index) => {
@@ -694,67 +830,89 @@
     $('#btnQuickSearch').click(async function () {
       $('#tablaAgendar').css('display', 'block');
       $('#mainScreen').css('display', 'none');
+      $('#backButton').css('visibility', 'visible');
+      $('#backButton').css('display', 'block');
+      $('#backCerrarSesion').css('display', 'none');
+      $('#backCerrarSesion').css('visibility', 'hidden');
       await updateGasfitersWithDistance();
       await generarListadoGasfiterRapido();
+    });
+    $('#backButton').click(function () {
+      $('#mainScreen').css('display', 'block');
+      $('#map').css('display', 'none');
+      $('#listadoGasfiter').css('display', 'none');
+      $('#tablaAgendar').css('display', 'none');
+      $('#backButton').css('display', 'none');
+      $('#backButton').css('visibility', 'hidden');
+      $('#backCerrarSesion').css('visibility', 'visible');
+      $('#backCerrarSesion').css('display', 'block');
+    });
+    $('#backCerrarSesion').click(function () {
+      $('#mainScreen').css('display', 'none');
+      $('.login-container').css('display', 'block');
+      $('#backCerrarSesion').css('display', 'none');
+      $('#backCerrarSesion').css('visibility', 'hidden');
+      $('#backButton').css('display', 'block');
+      $('#backButton').css('visibility', 'hidden');
     });
 
   });
   function generarListadoGasfiterRapido() {
-  // Función auxiliar para convertir "1 h 5 min" a minutos
-  function convertirDurationAMinutos(duration) {
-    let totalMinutos = 0;
-    if (duration.includes('h')) {
-      const [horas, resto] = duration.split('h');
-      totalMinutos += parseInt(horas.trim()) * 60;
-      if (resto) totalMinutos += parseInt(resto.replace('min', '').trim());
-    } else {
-      totalMinutos += parseInt(duration.replace('min', '').trim());
+    // Función auxiliar para convertir "1 h 5 min" a minutos
+    function convertirDurationAMinutos(duration) {
+      let totalMinutos = 0;
+      if (duration.includes('h')) {
+        const [horas, resto] = duration.split('h');
+        totalMinutos += parseInt(horas.trim()) * 60;
+        if (resto) totalMinutos += parseInt(resto.replace('min', '').trim());
+      } else {
+        totalMinutos += parseInt(duration.replace('min', '').trim());
+      }
+      return totalMinutos;
     }
-    return totalMinutos;
-  }
 
-  // Ordenar gasfiters por duración de menor a mayor
-  const gasfitersOrdenados = gasfiters.sort((a, b) => {
-    const duracionA = convertirDurationAMinutos(a.duration || "0 min"); // Aseguramos un valor por defecto
-    const duracionB = convertirDurationAMinutos(b.duration || "0 min");
-    return duracionA - duracionB;
-  });
-
-  const ahora = new Date();
-  ahora.setHours(ahora.getHours() + 1); // Añadir una hora
-  ahora.setMinutes(0, 0, 0); // Reiniciar los minutos y segundos a 00
-  const horaSiguiente = ahora.toTimeString().slice(0, 5);
-
-  const fechaActual = new Date().toISOString().split('T')[0];
-  const dayIndexActual = new Date().getDay();
-  const resultados = [];
-
-  // Buscar resultados sin reservas para la hora siguiente
-  gasfitersOrdenados.forEach((gasfiter) => {
-    const registro = reservasGen.find((entry) => {
-      return (
-        entry.dayIndex === dayIndexActual &&
-        entry.hour === horaSiguiente &&
-        entry.idGasfiter == gasfiter.id
-      );
+    // Ordenar gasfiters por duración de menor a mayor
+    const gasfitersOrdenados = gasfiters.sort((a, b) => {
+      const duracionA = convertirDurationAMinutos(a.duration || "0 min"); // Aseguramos un valor por defecto
+      const duracionB = convertirDurationAMinutos(b.duration || "0 min");
+      return duracionA - duracionB;
     });
 
-    if (!registro) {
-      resultados.push({
-        hora: horaSiguiente,
-        nombre: gasfiter.name,
-        idGasfiter: gasfiter.id,
-        horaEstimada: gasfiter.duration,
+    const ahora = new Date();
+    ahora.setHours(ahora.getHours() + 1); // Añadir una hora
+    ahora.setMinutes(0, 0, 0); // Reiniciar los minutos y segundos a 00
+    const horaSiguiente = ahora.toTimeString().slice(0, 5);
+
+    const fechaActual = new Date().toISOString().split('T')[0];
+    const dayIndexActual = new Date().getDay();
+    const resultados = [];
+
+    // Buscar resultados sin reservas para la hora siguiente
+    gasfitersOrdenados.forEach((gasfiter) => {
+      const registro = reservasGen.find((entry) => {
+        return (
+          entry.dayIndex === dayIndexActual &&
+          entry.hour === horaSiguiente &&
+          entry.idGasfiter == gasfiter.id
+        );
       });
-    }
-  });
 
-  // Insertar en la tabla
-  const agendarTableBody = document.getElementById('agendarTableBody');
-  agendarTableBody.innerHTML = ''; // Limpiar el contenido previo
+      if (!registro) {
+        resultados.push({
+          hora: horaSiguiente,
+          nombre: gasfiter.name,
+          idGasfiter: gasfiter.id,
+          horaEstimada: gasfiter.duration,
+        });
+      }
+    });
 
-  resultados.forEach((resultado, index) => {
-    const row = `
+    // Insertar en la tabla
+    const agendarTableBody = document.getElementById('agendarTableBody');
+    agendarTableBody.innerHTML = ''; // Limpiar el contenido previo
+
+    resultados.forEach((resultado, index) => {
+      const row = `
       <tr style="background-color: ${index % 2 === 0 ? 'white' : '#f2f2f2'};">
         <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${resultado.hora}</td>
         <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${resultado.nombre}</td>
@@ -768,11 +926,11 @@
         </td>
       </tr>
     `;
-    agendarTableBody.innerHTML += row;
-  });
+      agendarTableBody.innerHTML += row;
+    });
 
-  console.log("Gasfiters ordenados:", gasfitersOrdenados);
-}
+    console.log("Gasfiters ordenados:", gasfitersOrdenados);
+  }
   async function insertGastiferIdHour(idGasfiter, hora, button) {
     // Obtener el valor de data-datetime de la celda seleccionada
     const selDateTime = addHour(hora); // Añade la hora a la fecha actual
@@ -835,10 +993,65 @@
         console.error(`Error actualizando ${gasfiter.name}: ${error}`);
       }
     }
-
+    // Llama a la función para actualizar la lista de gasfiters
     console.log('Todos los gasfiters actualizados:', gasfiters);
   }
+  // Funciones
+  function calcularRuta() {
+    alert('Cálculo de ruta iniciado');
+  }
 
-  // Llama a la función para actualizar la lista de gasfiters
+  function actualizarData() {
+    alert('Actualización de extensión iniciada');
+  }
+
+  function renderizarTablaChamba() {
+    const tableBody = document.getElementById('chambaTableBody');
+    tableBody.innerHTML = '';
+
+    // Ajustar fecha actual según zona horaria local
+    const hoy = new Date();
+    const fechaActual = new Date(hoy.getTime() - hoy.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split('T')[0]; // YYYY-MM-DD
+
+    console.log('Fecha actual ajustada:', fechaActual);
+
+    // Filtrar reservas del día actual
+    const reservasHoy = reservasGen.filter((item) => {
+      const itemFecha = item.fecha.split(' ')[0].replace(/\//g, '-'); // Convertir formato "YYYY/MM/DD" a "YYYY-MM-DD"
+      return itemFecha === fechaActual && item.idGasfiter == idGasfiterLogin; // Coincidencia por fecha y gasfiter
+    });
+
+    // Generar filas dinámicamente
+    reservasHoy.forEach((item, index) => {
+      const usuario = usuarios.find((user) => user.id == item.idUsuario);
+      const hora = item.fecha.split(' ')[1]; // Extraer solo la hora (HH:MM:SS)
+      const estadoIcon = item.Estado === '1' ? '✅' : '⏳'; // Estado dinámico
+
+      const row = `
+      <tr style="background-color: ${index % 2 === 0 ? 'white' : '#f2f2f2'};">
+        <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${hora}</td>
+        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">
+          <img src="https://cdn.icon-icons.com/icons2/2622/PNG/512/brand_google_maps_icon_157937.png" 
+            alt="Ruta" style="width: 20px; height: 20px; cursor: pointer;" onclick="calcularRuta()">
+        </td>
+        <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${usuario ? usuario.name : 'Desconocido'}</td>
+        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">${estadoIcon}</td>
+        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">
+          <img src="https://png.pngtree.com/png-clipart/20230330/original/pngtree-clock-line-icon-png-image_9012699.png" 
+            alt="Extensión" style="width: 20px; height: 20px; cursor: pointer;" onclick="actualizarData()">
+        </td>
+      </tr>
+    `;
+
+      tableBody.innerHTML += row;
+    });
+
+    if (reservasHoy.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 12px;">No hay reservas para hoy.</td></tr>`;
+    }
+  }
+
 
 </script>
