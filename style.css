@@ -87,7 +87,7 @@ gmp-map {
 }
 
 .available {
-  background-color: #00f;
+  background-color: rgb(16, 236, 8);
   color: white;
   cursor: pointer;
 }
@@ -145,7 +145,7 @@ gmp-map {
 }
 
 .available {
-  background-color: blue;
+  background-color: rgb(64, 170, 38);
   color: white;
 }
 
