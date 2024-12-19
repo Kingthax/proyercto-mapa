@@ -89,7 +89,7 @@
     <select id="gasfiterSelect"></select>
 
     <!-- Botón para calcular la ruta caminando -->
-    <button id="walkingRouteBtn" onclick="calculateRoute('WALKING')">Ruta Caminando</button>
+    <button id="drivingRouteBtn" onclick="calculateRoute('DRIVING')">Ruta Caminando</button>
   </div>
 
   <!-- Login cliente gasfiteer -->
@@ -199,11 +199,11 @@
     </table>
   </div>
   <div id="tablaChamba" style="display: none; width: 100%; height: auto; margin: 0 auto; padding: 20px;">
-    <h2 id ="textoCTabla"
+    <h2 id="textoCTabla"
       style="font-family: Arial, sans-serif; text-align: center; margin: 20px 0; font-size: 1.5em; font-weight: bold;">
       Tabla de Chamba</h2>
 
-    <table id = "tablaCContainer"
+    <table id="tablaCContainer"
       style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 1em; text-align: left; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">
       <thead style="background-color: #555555; color: white; position: sticky; top: 0; z-index: 1;">
         <tr>
@@ -239,7 +239,7 @@
         <!-- Número -->
         <div style="margin-bottom: 15px;">
           <label for="numeroExt" style="display: block; margin-bottom: 8px; color: #555;">Número:</label>
-          <input type="number" id="numeroExt"
+          <input type="number" id="numeroExt" value="0"
             style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; color: #333; background: #f9f9f9;">
         </div>
 
@@ -281,10 +281,10 @@
 </html>
 <script>
   let map, directionsService, directionsRenderer;
-  let idUsuarioLogin = 0, idGasfiterLogin = 0, idCitasGasfiter = 0;
+  let idUsuarioLogin = 0, idGasfiterLogin = 0, idCitasGasfiter = 0, idUsuarioCitas = 0, fechaCita, descripcionCita, reservasHoyGen;
   let idGasfiterSeleccion = 0;
   const gasfiterLocations = [];
-  const fallbackLocation = { lat: -32.796517, lng: -71.208456 };  // Ubicación fija de respaldo (casa)
+  const fallbackLocation = { lat: -32.7295548, lng: -71.2084687 };  // Ubicación fija de respaldo (casa)
   let userLocation = null;  // Para almacenar la ubicación del usuario
   let reservasGen;
   function initMap() {
@@ -295,11 +295,11 @@
     map = new google.maps.Map(document.getElementById('map'));
 
     navigator.geolocation.getCurrentPosition(function (position) {
-      var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);// {-32.7206119, -71.2042502}
+      var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);// {-32.7295548, -71.2084687}
       map.setCenter(initialLocation);
       map.setZoom(13);
     }, function (positionError) {
-      map.setCenter(new google.maps.LatLng(39.8097343, -123.5556199));
+      map.setCenter(new google.maps.LatLng(39.8097343, -123.5556199));//-32.729554849432255, -71.20846874732048
       map.setZoom(5);
     });
     // map = new google.maps.Map(document.getElementById("map"), {
@@ -340,7 +340,7 @@
         new google.maps.Marker({
           position: userLocation,
           map: map,
-          label: 'U',  // Marcador para la ubicación del usuario
+          label: '',  // Marcador para la ubicación del usuario
         });
 
         // Generar los gasfíteres alrededor de la ubicación real
@@ -379,17 +379,17 @@
       id: 2
     },
     {
-      name: 'Rodrigo Tapia',
+      name: 'valeria Morales',
       address: 'Paseo de la Luz 789',
-      email: 'pedro.rodriguez@hotmail.com',
+      email: 'valeriamoralesre@gmail.com',
       phone: '+56 9 11223344',
       location: { lat: -32.7206119, lng: -71.2042502 },
       id: 3
     },
     {
-      name: 'Camilo Leiva',
+      name: 'karla nunez',
       address: 'Callejón del Río 321',
-      email: 'ana.lopez@gmail.com',
+      email: 'karla.nuf@gmail.com',
       phone: '+56 9 55667788',
       location: { lat: -32.7206119, lng: -71.2042502 },
       id: 4
@@ -397,7 +397,7 @@
     {
       name: 'Anival Gajardo',
       address: 'Calle Principal 654',
-      email: 'luis.martinez@gmail.com',
+      email: 'fa.quintanilla@uandresbello.edu',
       phone: '+56 9 22334455',
       location: { lat: -32.7206119, lng: -71.2042502 },
       id: 5
@@ -751,7 +751,8 @@
         idUsuario: cita.idUsuario,
         fecha: cita.Fecha,
         estado: cita.Estado,
-        idCitas: cita.idCitas
+        idCitas: cita.idCitas,
+        descripcion: cita.descripcion
       };
     });
   };
@@ -1245,7 +1246,7 @@
       const itemFecha = item.fecha.split(' ')[0].replace(/\//g, '-'); // Convertir formato "YYYY/MM/DD" a "YYYY-MM-DD"
       return itemFecha === fechaActual && item.idGasfiter == idGasfiterLogin; // Coincidencia por fecha y gasfiter
     });
-
+    reservasHoyGen = reservasHoy;
     // Generar filas dinámicamente
     reservasHoy.forEach((item, index) => {
       const usuario = usuarios.find((user) => user.id == item.idUsuario);
@@ -1278,7 +1279,7 @@
         <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">${estadoIcon}</td>
         <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">
           <img src="https://png.pngtree.com/png-clipart/20230330/original/pngtree-clock-line-icon-png-image_9012699.png" 
-            alt="Extensión" style="width: 20px; height: 20px; cursor: pointer;" onclick="abrirModal(${item.idCitas})">
+            alt="Extensión" style="width: 20px; height: 20px; cursor: pointer;" onclick="abrirModal(${item.idCitas},${item.idUsuario},'${item.fecha}','${item.descripcion}')">
         </td>
       </tr>
     `;
@@ -1292,9 +1293,13 @@
   }
 
   // Función para abrir el modal
-  function abrirModal(idCitas) {
+  function abrirModal(idCitas, idUsuario, fecha, descripcion) {
     document.getElementById('modalExtencion').style.display = 'flex';
     idCitasGasfiter = idCitas;
+    idUsuarioCitas = idUsuario;
+    fechaCita = fecha;
+    descripcionCita = descripcion;
+    document.getElementById('descripcionExt').value = descripcionCita;
   }
 
   // Función para cerrar el modal
@@ -1304,9 +1309,113 @@
   async function guardarModal() {
     try {
       // Obtener valores del modal
+
       const descripcion = document.getElementById('descripcionExt').value; // Descripción ingresada
+      const horasExtras = document.getElementById('numeroExt').value; // Descripción ingresada
+      // Datos para el POST
+      // Verificar selectedDateTime
+      if (!fechaCita) throw new Error("selectedDateTime no está definido.");
+
+      let fechaCitaSet = new Date(convertirAFechaISO(fechaCita));
+
+      if (isNaN(fechaCitaSet.getTime())) {
+        throw new Error("selectedDateTime no es una fecha válida.");
+      }
+
+      for (let i = 0; i < horasExtras; i++) {
+        fechaCitaSet.setHours(fechaCitaSet.getHours() + 1); // Sumar una hora
+        let formatFechaSet = formatFecha(fechaCitaSet)
+        for (const item of reservasHoyGen) {
+          const usuario = usuarios.find((user) => user.id == item.idUsuario);
+          const Gasfiter = gasfiters.find((listaGasfiters) => listaGasfiters.id == idGasfiterLogin);
+          if (item.fecha == formatFechaSet && item.idGasfiter == idGasfiterLogin && item.idUsuario != idUsuarioCitas) {
+            console.log("item.idCitas", item.idCitas)
+            console.log("usuario", usuario.email)
+            console.log("usuario", usuario.email)
+            const settingsSendMail = {
+              url: "http://localhost:5000/api/citas/send-email",
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              data: JSON.stringify({
+                to: usuario.email,
+                subject: "Eliminacion de Cita",
+                text: "Estimado Usuario su Gasfiter " + Gasfiter.name + " a eliminado su cita de las " + formatFechaSet.toString() + ",favor reagendar"
+              }),
+            };
+            console.log("settingsSendMail", settingsSendMail)
+            const responseSendMail = await new Promise((resolve, reject) => {
+              $.ajax({
+                ...settingsSendMail,
+                success: function (data) {
+                  resolve(data); // Resuelve la promesa si la llamada es exitosa
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                  reject(`Error: ${textStatus} - ${errorThrown}`); // Rechaza la promesa si hay un error
+                },
+              });
+            });
+
+
+            const settingsDelete = {
+              url: "http://localhost:5000/api/citas/delete",
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              data: JSON.stringify({
+                id: item.idCitas
+              }),
+            };
+            console.log("settingsDelete", settingsDelete)
+            const responseDelete = await new Promise((resolve, reject) => {
+              $.ajax({
+                ...settingsDelete,
+                success: function (data) {
+                  resolve(data); // Resuelve la promesa si la llamada es exitosa
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                  reject(`Error: ${textStatus} - ${errorThrown}`); // Rechaza la promesa si hay un error
+                },
+              });
+            });
+
+          }
+        };
+
+        const reser = reservasHoyGen.find((listaReserva) => listaReserva.idGasfiter == idGasfiterLogin && listaReserva.fecha == formatFechaSet && listaReserva.idUsuario == idUsuarioCitas);
+        if (reser) {
+          console.log("no inserta dato nuevo");
+        } else {
+          console.log("inserta dato nuevo");
+          const settingsInsert = {
+            url: "http://localhost:5000/api/citas",
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            data: JSON.stringify({
+              idUsuario: idUsuarioCitas,
+              idgasfiter: idGasfiterLogin,
+              Fecha: formatFechaSet,
+              Estado: 2,
+              calificacion: 0,
+            }),
+          };
+          console.log("settingsInsert", settingsInsert)
+          const response = await new Promise((resolve, reject) => {
+            $.ajax({
+              ...settingsInsert,
+              success: function (data) {
+                resolve(data); // Resuelve la promesa si la llamada es exitosa
+              },
+              error: function (jqXHR, textStatus, errorThrown) {
+                reject(`Error: ${textStatus} - ${errorThrown}`); // Rechaza la promesa si hay un error
+              },
+            });
+          });
+        }
+
+
+      }
 
       // Configuración de la solicitud AJAX
+
       const settings = {
         url: "http://localhost:5000/api/citas/update",
         method: "POST",
@@ -1333,15 +1442,16 @@
           },
         });
       });
-
+      document.getElementById('descripcionExt').value = ""; // Limpiar el campo descripcionExt
+      document.getElementById('numeroExt').value = "";      // Limpiar el campo numeroExt
       console.log("Actualización exitosa:", response);
       alert("Los datos se guardaron correctamente.");
-
       cerrarModal(); // Cerrar el modal después de guardar
 
       // Volver a cargar los datos (esperar a fetchReservas)
       await fetchReservas();
       await renderizarTablaChamba();
+
     } catch (error) {
       console.error("Error en la actualización:", error);
       alert("Ocurrió un error al guardar los datos.");
@@ -1352,6 +1462,24 @@
     console.log('Reservas actualizadas');
   }
   // Inicializar la tabla al cargar la página
-  renderizarTablaChamba();
+  //renderizarTablaChamba();
 
+  async function actualizarYCargarReservas() {
+    await fetchReservas(); // Espera a que termine fetchReservas
+    console.log('Reservas actualizadas');
+  }
+
+  function formatFecha(fecha) {
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0'); // Añadir ceros
+    const day = String(fecha.getDate()).padStart(2, '0');
+    const hours = String(fecha.getHours()).padStart(2, '0');
+    const minutes = String(fecha.getMinutes()).padStart(2, '0');
+    const seconds = String(fecha.getSeconds()).padStart(2, '0');
+
+    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+  }
+  function convertirAFechaISO(fechaString) {
+    return fechaString.replace(/\//g, "-").replace(" ", "T");
+  }
 </script>
