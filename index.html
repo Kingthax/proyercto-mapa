@@ -139,43 +139,14 @@
           <th style="padding: 15px; border-bottom: 1px solid #ddd;">Fecha</th>
           <th style="padding: 15px; border-bottom: 1px solid #ddd;">Hora</th>
           <th style="padding: 15px; border-bottom: 1px solid #ddd;">Estado</th>
+          <th style="padding: 15px; border-bottom: 1px solid #ddd;">Calificación</th>
         </tr>
       </thead>
       <tbody id="citasTableBody" style="overflow-y: auto;">
         <!-- Filas generadas dinámicamente -->
       </tbody>
     </table>
-    <!-- Controles de paginación -->
-    <div style="text-align: center; margin: 20px;">
-      <button id="prevPage" onclick="prevPage()" style="
-            background-color: #444;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 8px 12px;
-            font-size: 14px;
-            cursor: pointer;">
-        &#8592; Anterior
-      </button>
-
-      <span id="pageIndicator" style="
-            font-size: 16px;
-            font-family: Arial, sans-serif;
-            margin: 0 15px;">
-        Página 1 de 1
-      </span>
-
-      <button id="nextPage" onclick="nextPage()" style="
-            background-color: #444;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 8px 12px;
-            font-size: 14px;
-            cursor: pointer;">
-        Siguiente &#8594;
-      </button>
-    </div>
+  </div>
 
   </div>
   <!--listado de horas disponibles-->
@@ -212,6 +183,7 @@
           <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Nombre</th>
           <th style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">Estado</th>
           <th style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">Extensión</th>
+          <th style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">Terminado</th>
         </tr>
       </thead>
       <tbody id="chambaTableBody">
@@ -281,85 +253,12 @@
 </html>
 <script>
   let map, directionsService, directionsRenderer;
-  let idUsuarioLogin = 0, idGasfiterLogin = 0, idCitasGasfiter = 0, idUsuarioCitas = 0, fechaCita, descripcionCita, reservasHoyGen;
+  let idUsuarioLogin = 0, idGasfiterLogin = 0, idCitasGasfiter = 0, idUsuarioCitas = 0, fechaCita, descripcionCita, reservasHoyGen, cantidadEnvioCorreo = 0;
   let idGasfiterSeleccion = 0;
   const gasfiterLocations = [];
   const fallbackLocation = { lat: -32.7295548, lng: -71.2084687 };  // Ubicación fija de respaldo (casa)
   let userLocation = null;  // Para almacenar la ubicación del usuario
   let reservasGen;
-  function initMap() {
-    // Usar la ubicación de respaldo inicialmente para centrar el mapa
-    const centerLocation = fallbackLocation;
-
-    // Crear un nuevo mapa centrado en la ubicación de respaldo
-    map = new google.maps.Map(document.getElementById('map'));
-
-    navigator.geolocation.getCurrentPosition(function (position) {
-      var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);// {-32.7295548, -71.2084687}
-      map.setCenter(initialLocation);
-      map.setZoom(13);
-    }, function (positionError) {
-      map.setCenter(new google.maps.LatLng(39.8097343, -123.5556199));//-32.729554849432255, -71.20846874732048
-      map.setZoom(5);
-    });
-    // map = new google.maps.Map(document.getElementById("map"), {
-    //   zoom: 14,
-    //   center: centerLocation,
-    // });
-
-    // Inicializar DirectionsService y DirectionsRenderer
-    directionsService = new google.maps.DirectionsService();
-    directionsRenderer = new google.maps.DirectionsRenderer({
-      suppressMarkers: true,  // Evitar que la API agregue sus propios marcadores
-      polylineOptions: {
-        strokeColor: '#0000FF',  // Color azul para la ruta
-        strokeOpacity: 0.6,
-        strokeWeight: 5
-      }
-    });
-    directionsRenderer.setMap(map);
-
-    // Intentar obtener la ubicación real del usuario
-    getUserLocation();
-  }
-
-  // Función para obtener la ubicación del usuario
-  function getUserLocation() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(function (position) {
-        userLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        console.log('Ubicación actual del usuario obtenida:', userLocation);
-
-        // Centrar el mapa en la ubicación real del usuario
-        map.setCenter(userLocation);
-
-        // Colocar un marcador en la ubicación del usuario
-        new google.maps.Marker({
-          position: userLocation,
-          map: map,
-          label: '',  // Marcador para la ubicación del usuario
-        });
-
-        // Generar los gasfíteres alrededor de la ubicación real
-        generateGasfiterMarkers(userLocation);
-      }, function () {
-        console.warn('No se pudo obtener la ubicación del usuario, usando la ubicación de respaldo.');
-        userLocation = fallbackLocation;  // Usar la ubicación de respaldo si falla la geolocalización
-
-        // Generar los gasfíteres alrededor de la ubicación de respaldo
-        generateGasfiterMarkers(userLocation);
-      });
-    } else {
-      console.warn('Geolocalización no es compatible con este navegador, usando la ubicación de respaldo.');
-      userLocation = fallbackLocation;  // Usar la ubicación de respaldo si la geolocalización no es compatible
-
-      // Generar los gasfíteres alrededor de la ubicación de respaldo
-      generateGasfiterMarkers(userLocation);
-    }
-  }
   // Lista de Usuarios con datos fijos
   let usuarios = [
     {
@@ -383,7 +282,7 @@
       address: 'Paseo de la Luz 789',
       email: 'valeriamoralesre@gmail.com',
       phone: '+56 9 11223344',
-      location: { lat: -32.7206119, lng: -71.2042502 },
+      location: { lat: -32.730794, lng: -71.207574 },
       id: 3
     },
     {
@@ -391,7 +290,7 @@
       address: 'Callejón del Río 321',
       email: 'karla.nuf@gmail.com',
       phone: '+56 9 55667788',
-      location: { lat: -32.7206119, lng: -71.2042502 },
+      location: { lat: -32.7318971, lng: -71.2056549 },
       id: 4
     },
     {
@@ -399,7 +298,7 @@
       address: 'Calle Principal 654',
       email: 'fa.quintanilla@uandresbello.edu',
       phone: '+56 9 22334455',
-      location: { lat: -32.7206119, lng: -71.2042502 },
+      location: { lat: -32.740252, lng: -71.200637 },
       id: 5
     }
   ];
@@ -446,6 +345,113 @@
       id: 5
     }
   ];
+  function initMap() {
+    // Usar la ubicación de respaldo inicialmente para centrar el mapa
+    const centerLocation = fallbackLocation;
+
+    // Crear un nuevo mapa centrado en la ubicación de respaldo
+    map = new google.maps.Map(document.getElementById('map'));
+
+    navigator.geolocation.getCurrentPosition(function (position) {
+      var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);// {-32.7295548, -71.2084687}
+      map.setCenter(initialLocation);
+      map.setZoom(13);
+    }, function (positionError) {
+      map.setCenter(new google.maps.LatLng(39.8097343, -123.5556199));//-32.729554849432255, -71.20846874732048
+      map.setZoom(5);
+    });
+    // map = new google.maps.Map(document.getElementById("map"), {
+    //   zoom: 14,
+    //   center: centerLocation,
+    // });
+
+    // Inicializar DirectionsService y DirectionsRenderer
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      suppressMarkers: true,  // Evitar que la API agregue sus propios marcadores
+      polylineOptions: {
+        strokeColor: '#0000FF',  // Color azul para la ruta
+        strokeOpacity: 0.6,
+        strokeWeight: 5
+      }
+    });
+    directionsRenderer.setMap(map);
+  }
+
+  // Función para obtener la ubicación del usuario
+  function getUserLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function (position) {
+        userLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        console.log('Ubicación actual del usuario obtenida:', userLocation);
+
+        // Centrar el mapa en la ubicación real del usuario
+        map.setCenter(userLocation);
+
+        // Colocar un marcador en la ubicación del usuario
+        new google.maps.Marker({
+          position: userLocation,
+          map: map,
+          label: '',  // Marcador para la ubicación del usuario
+        });
+
+        // Generar los gasfíteres alrededor de la ubicación real
+        generateGasfiterMarkers(userLocation);
+      }, function () {
+        console.warn('No se pudo obtener la ubicación del usuario, usando la ubicación de respaldo.');
+        userLocation = fallbackLocation;  // Usar la ubicación de respaldo si falla la geolocalización
+
+        // Generar los gasfíteres alrededor de la ubicación de respaldo
+        generateGasfiterMarkers(userLocation);
+      });
+    } else {
+      console.warn('Geolocalización no es compatible con este navegador, usando la ubicación de respaldo.');
+      userLocation = fallbackLocation;  // Usar la ubicación de respaldo si la geolocalización no es compatible
+
+      // Generar los gasfíteres alrededor de la ubicación de respaldo
+      generateGasfiterMarkers(userLocation);
+    }
+  }
+
+  // Función para obtener la ubicación del usuario
+  function getUserLocationGasfiterChamba() {
+    const gasfiter = gasfiters.find((g) => g.id == idGasfiterLogin);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function (position) {
+        userLocation = gasfiter.location;
+        console.log('Ubicación actual del Gasfiter obtenida:', userLocation);
+
+        // Centrar el mapa en la ubicación real del usuario
+        map.setCenter(userLocation);
+
+        // Colocar un marcador en la ubicación del usuario
+        new google.maps.Marker({
+          position: userLocation,
+          map: map,
+          label: '',  // Marcador para la ubicación del usuario
+        });
+
+        // Generar los gasfíteres alrededor de la ubicación real
+        generateUsuarioMarkers(userLocation);
+      }, function () {
+        console.warn('No se pudo obtener la ubicación del usuario, usando la ubicación de respaldo.');
+        userLocation = fallbackLocation;  // Usar la ubicación de respaldo si falla la geolocalización
+
+        // Generar los gasfíteres alrededor de la ubicación de respaldo
+        generateUsuarioMarkers(userLocation);
+      });
+    } else {
+      console.warn('Geolocalización no es compatible con este navegador, usando la ubicación de respaldo.');
+      userLocation = fallbackLocation;  // Usar la ubicación de respaldo si la geolocalización no es compatible
+
+      // Generar los gasfíteres alrededor de la ubicación de respaldo
+      generateUsuarioMarkers(userLocation);
+    }
+  }
+
 
   // Función para generar los marcadores de gasfíteres a partir de datos fijos
   function generateGasfiterMarkers() {
@@ -483,7 +489,34 @@
       select.appendChild(option);
     });
   }
+  // Función para generar los marcadores de gasfíteres a partir de datos fijos
+  function generateUsuarioMarkers() {
 
+    usuarios.forEach(usuario => {
+      // Crear marcador para cada gasfíter con una ventana de información
+      const marker = new google.maps.Marker({
+        position: usuario.location,
+        map: map,
+        label: 'U' // Marcador de gasfíter
+      });
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+        <div>
+          <h3>${usuario.name}</h3>
+          <p><strong>Dirección:</strong> ${usuario.address}</p>
+          <p><strong>Correo:</strong> ${usuario.email}</p>
+          <p><strong>Teléfono:</strong> ${usuario.phone}</p>
+        </div>
+      `
+      });
+
+      // Mostrar la ventana de información al hacer clic en el marcador
+      marker.addListener('click', function () {
+        infoWindow.open(map, marker);
+      });
+    });
+  }
   // Función para generar una ubicación aleatoria dentro de un radio
   function getRandomLocation(center, radius) {
     const earthRadius = 6371e3;  // Radio de la Tierra en metros
@@ -601,7 +634,7 @@
     table.className = 'schedule-table';
 
     const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const hours = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+    const hours = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00','19:00','20:00'];
 
     // Obtener la fecha actual y ajustar para el lunes de la semana actual
     const today = new Date();
@@ -643,6 +676,9 @@
         // Formatear hora
         const formattedHour = `${hour}:00`;
         const dateTime = `${year}/${month}/${date} ${formattedHour}`;
+        const dateTime2 = new Date(`${year}-${month}-${date}T${formattedHour}`); // Fecha y hora de la celda
+        // Verificar si la hora ya pasó
+        const isPast = dateTime2 < today;
 
         // Verificar si la celda está reservada
         const isReserved = reservasGen.some((reserva) => {
@@ -652,15 +688,16 @@
         const isReservedUser = reservasGen.some((reserva) => {
           return reserva.dayIndex == index + 1 && reserva.hour == hour && reserva.idGasfiter == idGasfiter && reserva.idUsuario == idUsuarioLogin;
         });
-        if (isReservedUser) {
+        if (isPast) {
+          cell.className = 'past';
+          cell.innerText = 'no habil';
+        } else if (isReservedUser) {
           cell.className = 'pending';
           cell.innerText = 'Reservado';
-        }
-        else if (isReserved) {
+        } else if (isReserved) {
           cell.className = 'unavailable';
           cell.innerText = 'No Disponible';
-        }
-        else {
+        } else {
           cell.className = 'available';
           cell.innerText = 'Disponible';
           cell.onclick = () => toggleCell(cell);
@@ -730,6 +767,7 @@
 
       // Resetear la selección
       selectedCell = null;
+      
       alert('Horario confirmado exitosamente.');
     } else {
       alert('Por favor, selecciona un horario antes de confirmar.');
@@ -752,7 +790,8 @@
         fecha: cita.Fecha,
         estado: cita.Estado,
         idCitas: cita.idCitas,
-        descripcion: cita.descripcion
+        descripcion: cita.descripcion,
+        calificacion: cita.calificacion
       };
     });
   };
@@ -824,6 +863,7 @@
       selectedCell.classList.remove('available');
       selectedCell.classList.add('pending');
       selectedCell.innerText = 'Reservado';
+      document.getElementById('scheduleModal').style.display = 'none';
       fetchReservas();
     }).fail(function (error) {
       console.error(error);
@@ -831,7 +871,50 @@
     });
   }
 
+  async function guardarCalificacion(reservaId) {
+    const input = document.getElementById(`calificacion-${reservaId}`);
+    const guardarBtn = document.getElementById(`guardar-${reservaId}`);
+    const calificacion = parseInt(input.value);
 
+    if (calificacion >= 1 && calificacion <= 7) {
+
+      // Aquí puedes añadir la lógica para guardar la calificación en el backend o en una variable global
+      const settings = {
+        url: "http://localhost:5000/api/citas/calificacion",
+        method: "POST",
+        timeout: 0,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        data: JSON.stringify({
+          idCitas: reservaId,
+          calificacion: input.value,
+        }),
+      };
+
+      // Realizar la solicitud AJAX y esperar a que termine
+      const response = await new Promise((resolve, reject) => {
+        $.ajax({
+          ...settings,
+          success: function (data) {
+            fetchReservas();
+            resolve(data); // Resuelve la promesa si la llamada es exitosa
+          },
+          error: function (jqXHR, textStatus, errorThrown) {
+            reject(`Error: ${textStatus} - ${errorThrown}`); // Rechaza la promesa si hay un error
+          },
+        });
+      });
+      console.log(`Calificación guardada para la reserva ${reservaId}: ${calificacion}`);
+      input.disabled = true;
+      guardarBtn.disabled = true;
+      guardarBtn.style.backgroundColor = 'gray';
+      guardarBtn.style.cursor = 'not-allowed';
+
+    } else {
+      alert('Por favor, ingresa una calificación válida (entre 1 y 7).');
+    }
+  }
   $(document).ready(function () {
     $('#login-button').click(function () {
       const username = $('#username').val();
@@ -852,7 +935,11 @@
         $('#backCerrarSesion').css('display', 'block');
         $('#backButton').css('display', 'none');
         $('#password').val("");
+        initMap()
         idUsuarioLogin = extractLastNumber(username);
+        fetchReservas();
+        // Intentar obtener la ubicación real del usuario
+        getUserLocation();
       }
       else if ((username === 'gasfiter_1' || username === 'gasfiter_2' || username === 'gasfiter_3' || username === 'gasfiter_3' || username === 'gasfiter_3') &&
 
@@ -868,6 +955,10 @@
         $('#mapContainer').css('display', 'block');
         // Llamada inicial
         idGasfiterLogin = extractLastNumber(username);
+        fetchReservas();
+        initMap()
+        getUserLocationGasfiterChamba()
+        cantidadEnvioCorreo = 0;
         renderizarTablaChamba();
       }
       else {
@@ -893,101 +984,12 @@
       $('#backButton').css('display', 'block');
       $('#backCerrarSesion').css('display', 'none');
       $('#backCerrarSesion').css('visibility', 'hidden');
-
-      const tableBody = document.getElementById('citasTableBody');
-      const rowsPerPage = 10; // Máximo de reservas por página
-      let currentPage = 1; // Página inicial
-
-      function mostrarReservasPaginadas() {
-        tableBody.innerHTML = ''; // Limpia el contenido actual de la tabla
-
-        // Filtrar y ordenar las reservas
-        const reservasFiltradas = reservasGen
-          .filter((reserva) => reserva.idUsuario == idUsuarioLogin) // Filtrar por usuario
-          .sort((a, b) => {
-            const fechaHoraA = new Date(`${a.fecha}T${a.hora}`); // Combina fecha y hora
-            const fechaHoraB = new Date(`${b.fecha}T${b.hora}`);
-            return fechaHoraB - fechaHoraA; // Ordena descendente
-          });
-
-        // Calcular el total de páginas
-        const totalReservas = reservasFiltradas.length;
-        const totalPages = Math.ceil(totalReservas / rowsPerPage);
-
-        // Asegurarse de que currentPage no exceda el total de páginas
-        if (currentPage > totalPages) currentPage = totalPages;
-
-        // Calcular las reservas para la página actual
-        const start = (currentPage - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-        const reservasPaginadas = reservasFiltradas.slice(start, end);
-
-        // Mostrar las filas
-        reservasPaginadas.forEach((reserva, index) => {
-          const gasfiter = gasfiters.find((g) => g.id === parseInt(reserva.idGasfiter));
-          const dateParts = reserva.fecha.split(' ');
-          const fecha = dateParts[0];
-          const hora = dateParts[1];
-          let estadoIcon = '';
-
-          // Iconos de estado
-          switch (reserva.estado) {
-            case '1':
-              estadoIcon = `<span style="color: green; font-weight: bold;">✅</span>`;
-              break;
-            case '2':
-              estadoIcon = `<span style="color: gray; font-weight: bold;">➖</span>`;
-              break;
-            default:
-              estadoIcon = `<span style="color: red; font-weight: bold;">❌</span>`;
-          }
-
-          const row = `
-            <tr style="background-color: ${index % 2 == 0 ? 'white' : '#f2f2f2'};">
-              <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${gasfiter ? gasfiter.name : 'Desconocido'}</td>
-              <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${fecha}</td>
-              <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${hora}</td>
-              <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${estadoIcon}</td>
-            </tr>
-          `;
-          tableBody.innerHTML += row;
-        });
-
-        // Actualizar el indicador de página
-        document.getElementById('pageIndicator').innerText = `Página ${currentPage} de ${totalPages}`;
-
-        // Deshabilitar botones si estás en la primera o última página
-        document.getElementById('prevPage').disabled = currentPage === 1;
-        document.getElementById('nextPage').disabled = currentPage === totalPages;
-      }
-
-      // Función para avanzar a la siguiente página
-      function nextPage() {
-        const totalPages = Math.ceil(
-          reservasGen.filter((r) => r.idUsuario == idUsuarioLogin).length / rowsPerPage
-        );
-        if (currentPage < totalPages) {
-          currentPage++;
-          mostrarReservasPaginadas();
-        }
-      }
-
-      // Función para ir a la página anterior
-      function prevPage() {
-        if (currentPage > 1) {
-          currentPage--;
-          mostrarReservasPaginadas();
-        }
-      }
-
-      // Asociar los eventos a los botones
-      document.getElementById('nextPage').addEventListener('click', nextPage);
-      document.getElementById('prevPage').addEventListener('click', prevPage);
-
-      // Inicializar la tabla
       mostrarReservasPaginadas();
 
     });
+
+    // Función para guardar la calificación
+
     $('#btnQuickSearch').click(async function () {
       $('#tablaAgendar').css('display', 'block');
       $('#mainScreen').css('display', 'none');
@@ -1010,7 +1012,7 @@
       $('#backCerrarSesion').css('display', 'block');
       $('#tablaChamba').css('display', 'none');
       $('#textoCTabla').css('display', 'block');
-      $('#tablaCContainer').css('display', 'block');
+      $('#tablaCContainer').css('display', 'inline-table');
     });
     $('#backCerrarSesion').click(function () {
       $('#mainScreen').css('display', 'none');
@@ -1041,6 +1043,72 @@
       $('#backButton').css('visibility', 'visible');
     });
   });
+  function mostrarReservasPaginadas() {
+    const tableBody = document.getElementById('citasTableBody');
+    tableBody.innerHTML = ''; // Limpia el contenido actual de la tabla
+
+    // Filtrar y ordenar las reservas
+    const reservasFiltradas = reservasGen
+      .filter((reserva) => reserva.idUsuario == idUsuarioLogin) // Filtrar por usuario
+      .sort((a, b) => {
+        const fechaHoraA = new Date(a.fecha); // Fecha ya tiene la hora incluida
+        const fechaHoraB = new Date(b.fecha);
+        return fechaHoraB - fechaHoraA; // Ordena descendente (mayor a menor)
+      });
+
+    // Mostrar las filas
+    reservasFiltradas.forEach((reserva, index) => {
+      const gasfiter = gasfiters.find((g) => g.id === parseInt(reserva.idGasfiter));
+      const dateParts = reserva.fecha.split(' ');
+      const fecha = dateParts[0];
+      const hora = dateParts[1];
+      let estadoIcon = '';
+
+      // Iconos de estado
+      switch (reserva.estado) {
+        case '3':
+          estadoIcon = `<span style="color: green; font-weight: bold;">✅</span>`;
+          break;
+        case '2':
+          estadoIcon = `<img src="https://cdn-icons-png.flaticon.com/512/4635/4635159.png" alt="Herramienta" style="width: 20px; height: 20px;" title="Trabajando">`;
+          break;
+        case '1':
+          estadoIcon = `<span style="color: gray; font-weight: bold;">➖</span>`;
+        default:
+          estadoIcon = `<span style="color: red; font-weight: bold;">❌</span>`;
+      }
+      const calificacion = reserva.calificacion == null || reserva.calificacion == 0 ? "" : reserva.calificacion;
+
+const row = `
+    <tr style="background-color: ${index % 2 == 0 ? 'white' : '#f2f2f2'};">
+        <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${gasfiter ? gasfiter.name : 'Desconocido'}</td>
+        <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${fecha}</td>
+        <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${hora}</td>
+        <td style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">${estadoIcon}</td>
+        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">
+            ${reserva.estado == '3' ? `
+                <input type="number" id="calificacion-${reserva.idCitas}" 
+                       min="1" max="7" 
+                       style="width: 60px; text-align: center;" 
+                       value="${calificacion}"
+                       ${reserva.calificacion != null && reserva.calificacion != 0 ? 'disabled' : ''}>
+                <button onclick="guardarCalificacion('${reserva.idCitas}')" id="guardar-${reserva.idCitas}" 
+                        style="background-color: ${reserva.calificacion !== null && reserva.calificacion !== 0 ? 'gray' : '#444'}; 
+                               color: white; 
+                               border: none; 
+                               border-radius: 5px; 
+                               padding: 5px 10px; 
+                               cursor: ${reserva.calificacion != null && reserva.calificacion != 0 ? 'not-allowed' : 'pointer'};" 
+                        ${reserva.calificacion != null && reserva.calificacion != 0 ? 'disabled' : ''}>
+                    Guardar
+                </button>
+            ` : ''}
+        </td>
+    </tr>
+`;
+      tableBody.innerHTML += row;
+    });
+  }
   function generarListadoGasfiterRapido() {
     // Función auxiliar para convertir "1 h 5 min" a minutos
     function convertirDurationAMinutos(duration) {
@@ -1252,6 +1320,7 @@
       const usuario = usuarios.find((user) => user.id == item.idUsuario);
       const hora = item.fecha.split(' ')[1]; // Extraer solo la hora (HH:MM:SS)
       let estadoIcon;
+      let isChecked = '';
       switch (item.estado) {
         case '1':
           estadoIcon = `<img src="https://e7.pngegg.com/pngimages/599/208/png-clipart-shoe-footprint-computer-icons-hiking-shoe-fashion-logo.png" 
@@ -1263,10 +1332,12 @@
           break;
         case '3':
           estadoIcon = '✅'; // Ticket verde
+          isChecked = 'checked';
           break;
         default:
           estadoIcon = '⏳'; // Por defecto un icono de reloj
       }
+      // Determinar si el checkbox debe estar seleccionado (checked)
 
       const row = `
       <tr style="background-color: ${index % 2 == 0 ? 'white' : '#f2f2f2'};">
@@ -1281,6 +1352,9 @@
           <img src="https://png.pngtree.com/png-clipart/20230330/original/pngtree-clock-line-icon-png-image_9012699.png" 
             alt="Extensión" style="width: 20px; height: 20px; cursor: pointer;" onclick="abrirModal(${item.idCitas},${item.idUsuario},'${item.fecha}','${item.descripcion}')">
         </td>
+        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">
+            <input type="checkbox" ${isChecked} onclick="cambiarEstado(${item.idCitas}, this.checked,${item.idUsuario},'${item.fecha}')">
+          </td>
       </tr>
     `;
 
@@ -1291,7 +1365,64 @@
       tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 12px;">No hay reservas para hoy.</td></tr>`;
     }
   }
+  async function cambiarEstado(idCitas, terminado, idUsuario, fecha) {
+    console.log(`Cita ${idCitas} terminó: ${terminado}`);
 
+    let estado = 1;
+    if (terminado) {
+      estado = 3;
+      const usuario = usuarios.find((user) => user.id == idUsuario);
+      const Gasfiter = gasfiters.find((listaGasfiters) => listaGasfiters.id == idGasfiterLogin);
+      const settingsSendMail = {
+        url: "http://localhost:5000/api/citas/send-email",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        data: JSON.stringify({
+          to: usuario.email,
+          subject: "Termino de trabajo",
+          text: "Estimado Usuario su Gasfiter " + Gasfiter.name + " a Finalizado su trabajo de las " + fecha + ",favor realizar su calificación"
+        }),
+      };
+      console.log("settingsSendMail", settingsSendMail)
+      if (cantidadEnvioCorreo <= 2) {
+        cantidadEnvioCorreo = cantidadEnvioCorreo + 1;
+        const responseSendMail = await new Promise((resolve, reject) => {
+          $.ajax({
+            ...settingsSendMail,
+            success: function (data) {
+              resolve(data); // Resuelve la promesa si la llamada es exitosa
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+              reject(`Error: ${textStatus} - ${errorThrown}`); // Rechaza la promesa si hay un error
+            },
+          });
+        });
+      }
+    } else {
+      estado = 2;
+    }
+    const settingsUpdateEstado = {
+      url: "http://localhost:5000/api/citas/updateEstado",
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: JSON.stringify({
+        idCitas: idCitas,
+        Estado: estado
+      }),
+    };
+    console.log("settingsUpdateEstado", settingsUpdateEstado)
+    const responseUpdateEstado = await new Promise((resolve, reject) => {
+      $.ajax({
+        ...settingsUpdateEstado,
+        success: function (data) {
+          resolve(data); // Resuelve la promesa si la llamada es exitosa
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+          reject(`Error: ${textStatus} - ${errorThrown}`); // Rechaza la promesa si hay un error
+        },
+      });
+    });
+  }
   // Función para abrir el modal
   function abrirModal(idCitas, idUsuario, fecha, descripcion) {
     document.getElementById('modalExtencion').style.display = 'flex';
@@ -1330,7 +1461,6 @@
           const Gasfiter = gasfiters.find((listaGasfiters) => listaGasfiters.id == idGasfiterLogin);
           if (item.fecha == formatFechaSet && item.idGasfiter == idGasfiterLogin && item.idUsuario != idUsuarioCitas) {
             console.log("item.idCitas", item.idCitas)
-            console.log("usuario", usuario.email)
             console.log("usuario", usuario.email)
             const settingsSendMail = {
               url: "http://localhost:5000/api/citas/send-email",
