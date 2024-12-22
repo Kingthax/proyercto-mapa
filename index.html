@@ -110,8 +110,8 @@
   <div id="mainScreen" style="display: none;">
     <h2>Bienvenido, <span id="userWelcome"></span></h2>
     <div class="button-container">
-      <button id="btnNotifications" class="main-button">Ver Notificaciones</button>
-      <button id="btnQuickSearch" class="main-button">Búsqueda Rápida</button>
+      <button id="btnQuickSearch" class="main-button">Cita Rapida</button>
+      <button id="btnNotifications" class="main-button">Historial de agenda</button>
       <button id="btnMap" class="main-button">Ver Mapa</button>
     </div>
   </div>
@@ -153,7 +153,7 @@
   <div id="tablaAgendar" style="display: none; width: 100%; height: auto; margin: 0 auto; padding: 20px;">
     <h2
       style="font-family: Arial, sans-serif; text-align: center; margin: 20px 0; font-size: 1.5em; font-weight: bold;">
-      Tabla de Agendamientos</h2>
+      Cercanos a mí</h2>
     <table
       style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 1em; text-align: left; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">
       <thead style="background-color: #555555; color: white; position: sticky; top: 0; z-index: 1;">
@@ -307,7 +307,7 @@
     {
       name: 'Juan Pérez',
       address: 'Calle Principal 123',
-      email: 'juan.perez@gmail.com',
+      email: 'fa.quintanilla@uandresbello.edu',
       phone: '+56 9 12345678',
       location: { lat: -32.73050, lng: -71.20383 }, // Coordenadas
       id: 1
@@ -392,11 +392,11 @@
         map.setCenter(userLocation);
 
         // Colocar un marcador en la ubicación del usuario
-        new google.maps.Marker({
-          position: userLocation,
-          map: map,
-          label: '',  // Marcador para la ubicación del usuario
-        });
+        //new google.maps.Marker({
+         // position: userLocation,
+         // map: map,
+        //  label: 'U',  // Marcador para la ubicación del usuario
+        //});
 
         // Generar los gasfíteres alrededor de la ubicación real
         generateGasfiterMarkers(userLocation);
@@ -416,7 +416,7 @@
     }
   }
 
-  // Función para obtener la ubicación del usuario
+  // Función para obtener la ubicación del Gasfiter
   function getUserLocationGasfiterChamba() {
     const gasfiter = gasfiters.find((g) => g.id == idGasfiterLogin);
     if (navigator.geolocation) {
@@ -458,11 +458,12 @@
     const select = document.getElementById('gasfiterSelect');
 
     gasfiters.forEach(gasfiter => {
+      const primerCaracter = gasfiter.name.charAt(0); // O usuario.name[0]
       // Crear marcador para cada gasfíter con una ventana de información
       const marker = new google.maps.Marker({
         position: gasfiter.location,
         map: map,
-        label: 'G' // Marcador de gasfíter
+        label: primerCaracter // Marcador de gasfíter
       });
 
       const infoWindow = new google.maps.InfoWindow({
@@ -493,11 +494,13 @@
   function generateUsuarioMarkers() {
 
     usuarios.forEach(usuario => {
+
+      const primerCaracter = usuario.name.charAt(0); // O usuario.name[0]
       // Crear marcador para cada gasfíter con una ventana de información
       const marker = new google.maps.Marker({
         position: usuario.location,
         map: map,
-        label: 'U' // Marcador de gasfíter
+        label: primerCaracter // Marcador de gasfíter
       });
 
       const infoWindow = new google.maps.InfoWindow({
@@ -937,6 +940,10 @@
         $('#password').val("");
         initMap()
         idUsuarioLogin = extractLastNumber(username);
+        const spanElement = document.getElementById("userWelcome");
+        const usuario = usuarios.find((user) => user.id == idUsuarioLogin);
+        // Agrega texto al span
+        spanElement.textContent = usuario.name;
         fetchReservas();
         // Intentar obtener la ubicación real del usuario
         getUserLocation();
